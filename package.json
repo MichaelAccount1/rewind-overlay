@@ -2,7 +2,10 @@
   "name": "rewind-overlay",
   "version": "1.0.0",
   "description": "Broadcast-quality VR, rank and race-change overlay for Retro Rewind",
-  "author": "Rewind Overlay contributors",
+  "author": {
+    "name": "Rewind Overlay contributors",
+    "email": "MichaelAccount1@users.noreply.github.com"
+  },
   "license": "MIT",
   "homepage": "https://github.com/MichaelAccount1/rewind-overlay",
   "repository": {
@@ -107,7 +110,9 @@
         "AppImage",
         "deb"
       ],
-      "category": "Utility"
+      "category": "Utility",
+      "desktopName": "rewind-overlay.desktop",
+      "synopsis": "Retro Rewind player overlay for OBS and desktop"
     }
   }
 }
