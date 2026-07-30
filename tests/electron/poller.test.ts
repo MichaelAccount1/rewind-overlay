@@ -290,6 +290,60 @@ describe("live polling", () => {
     expect(poller.player.rankDelta).toBe(3); // positive = climbed
   });
 
+  it("keeps the same player object and updatedAt when a poll changes nothing", async () => {
+    stubRoutes({
+      "https://rwfc.net/api/roomstatus": fixture("roomstatus.json"),
+      [`https://rwfc.net/api/leaderboard/player/${FC}/history/recent`]: fixture("history-recent.json"),
+      [`https://rwfc.net/api/leaderboard/player/${FC}`]: fixture("player.json")
+    });
+    const poller = new PlayerPoller(makeStore(makeConfig()));
+    await poll(poller);
+    const before = poller.player;
+
+    vi.setSystemTime(new Date("2026-07-30T02:00:10Z")); // next tick, nothing changed upstream
+    await poll(poller);
+
+    // Same reference -> same updatedAt -> renderer animations keyed on it stay put.
+    expect(poller.player).toBe(before);
+
+    // A real change must still swap the object.
+    vi.setSystemTime(new Date("2026-07-30T02:02:00Z")); // past profile cadence
+    const roomstatus = structuredClone(fixture("roomstatus.json")) as {
+      rooms: { race: { num: number }; players: { vr: number }[] }[];
+    };
+    roomstatus.rooms[0].race.num = 128;
+    roomstatus.rooms[0].players[0].vr = 77811;
+    stubRoutes({
+      "https://rwfc.net/api/roomstatus": roomstatus,
+      [`https://rwfc.net/api/leaderboard/player/${FC}/history/recent`]: fixture("history-recent.json"),
+      [`https://rwfc.net/api/leaderboard/player/${FC}`]: fixture("player.json")
+    });
+    await poll(poller);
+    expect(poller.player).not.toBe(before);
+    expect(poller.player.vr).toBe(77811);
+  });
+
+  it("keeps the same player object across idle preview and waiting polls", async () => {
+    const demoConfig = makeConfig();
+    demoConfig.data.demoMode = true;
+    const demoPoller = new PlayerPoller(makeStore(demoConfig));
+    await poll(demoPoller);
+    const demoBefore = demoPoller.player;
+    await poll(demoPoller);
+    expect(demoPoller.player).toBe(demoBefore);
+
+    stubRoutes({
+      "https://rwfc.net/api/roomstatus": { rooms: [] },
+      [`https://rwfc.net/api/leaderboard/player/${FC}`]: 404
+    });
+    const waitingPoller = new PlayerPoller(makeStore(makeConfig()));
+    await poll(waitingPoller);
+    const waitingBefore = waitingPoller.player;
+    vi.setSystemTime(new Date("2026-07-30T02:00:10Z"));
+    await poll(waitingPoller);
+    expect(waitingPoller.player).toBe(waitingBefore);
+  });
+
   it("keeps serving leaderboard data when the player is not in a room", async () => {
     stubRoutes({
       "https://rwfc.net/api/roomstatus": { rooms: [] },

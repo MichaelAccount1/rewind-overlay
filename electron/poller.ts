@@ -52,6 +52,14 @@ export interface PlayerExtras {
 
 export type OverlayPlayer = PlayerState & { extras?: PlayerExtras };
 
+/**
+ * Value identity ignoring the timestamp: polls that change nothing must not
+ * produce a new player object or updatedAt, because renderer animations key
+ * on them and would replay on every poll (v1.0.1 user report).
+ */
+const playerFingerprint = (player: OverlayPlayer): string =>
+  JSON.stringify({ ...player, updatedAt: "" });
+
 /** Additive: the identity-detection trail for Studio's troubleshooting panel. */
 export type OverlayStatus = RuntimeStatus & { identitySteps?: string[] };
 
@@ -200,12 +208,15 @@ export class PlayerPoller extends EventEmitter {
         return; // next tick reads the updated config and takes the live path
       }
     }
-    this.player = {
+    const next: OverlayPlayer = {
       ...this.player,
       name: config.identity.playerName || this.player.name,
       tag: config.identity.tag,
       source: "demo"
     };
+    if (playerFingerprint(next) !== playerFingerprint(this.player)) {
+      this.player = next;
+    }
     this.status = {
       ...this.status,
       phase: "connected",
@@ -339,7 +350,7 @@ export class PlayerPoller extends EventEmitter {
     const name = seat?.player.name || profile?.name || this.identity?.name || config.identity.playerName || "Player";
     const friendCode = seat?.player.friendCode || profile?.friendCode || this.identity?.friendCode || "";
 
-    this.player = {
+    const next: OverlayPlayer = {
       name,
       tag: config.identity.tag,
       friendCode,
@@ -374,6 +385,9 @@ export class PlayerPoller extends EventEmitter {
         lastSeen: profile?.lastSeen ?? null
       }
     };
+    if (playerFingerprint(next) !== playerFingerprint(this.player)) {
+      this.player = next;
+    }
     this.status = {
       ...this.status,
       phase: "connected",
@@ -386,19 +400,20 @@ export class PlayerPoller extends EventEmitter {
 
   private becomeWaiting(config: OverlayConfig, message: string): void {
     // Keep something meaningful on screen: the save-file VR beats a blank panel.
-    if (this.identity && this.player.source !== "rwfc") {
-      this.player = {
-        ...this.player,
-        name: this.identity.name || config.identity.playerName || this.player.name,
-        tag: config.identity.tag,
-        friendCode: this.identity.friendCode,
-        vr: this.identity.vr ?? this.player.vr,
-        online: false,
-        updatedAt: new Date().toISOString(),
-        source: "manual"
-      };
-    } else {
-      this.player = { ...this.player, online: false, updatedAt: new Date().toISOString() };
+    const next: OverlayPlayer = this.identity && this.player.source !== "rwfc"
+      ? {
+          ...this.player,
+          name: this.identity.name || config.identity.playerName || this.player.name,
+          tag: config.identity.tag,
+          friendCode: this.identity.friendCode,
+          vr: this.identity.vr ?? this.player.vr,
+          online: false,
+          updatedAt: new Date().toISOString(),
+          source: "manual"
+        }
+      : { ...this.player, online: false, updatedAt: new Date().toISOString() };
+    if (playerFingerprint(next) !== playerFingerprint(this.player)) {
+      this.player = next;
     }
     this.status = {
       ...this.status,
