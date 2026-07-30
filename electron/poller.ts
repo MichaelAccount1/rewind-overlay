@@ -51,6 +51,9 @@ export interface PlayerExtras {
 
 export type OverlayPlayer = PlayerState & { extras?: PlayerExtras };
 
+/** Additive: the identity-detection trail for Studio's troubleshooting panel. */
+export type OverlayStatus = RuntimeStatus & { identitySteps?: string[] };
+
 interface TrackedRace {
   roomId: string;
   raceNum: number | null;
@@ -58,7 +61,7 @@ interface TrackedRace {
 
 export class PlayerPoller extends EventEmitter {
   player: OverlayPlayer = structuredClone(defaultPlayer);
-  status: RuntimeStatus = {
+  status: OverlayStatus = {
     phase: "starting",
     message: "Starting data service...",
     lastSuccessAt: null,
@@ -184,15 +187,24 @@ export class PlayerPoller extends EventEmitter {
   /** Identity precedence: explicit friend code > WheelWizard auto-detection > name match. */
   private resolveFriendCode(config: OverlayConfig): string {
     if (config.identity.mode === "friendCode") {
-      return formatFriendCode(config.identity.friendCode);
+      const friendCode = formatFriendCode(config.identity.friendCode);
+      this.status.identitySteps = [`Using friend code from settings: ${friendCode || "(empty)"}`];
+      return friendCode;
     }
     if (config.identity.mode === "manual") {
+      this.status.identitySteps = [
+        this.manualModeFriendCode
+          ? `Matched "${config.identity.playerName}" in a room -> ${this.manualModeFriendCode}`
+          : `Watching rooms for player name "${config.identity.playerName}"`
+      ];
       return this.manualModeFriendCode; // learned from a name match in a room, if ever
     }
     const now = Date.now();
     if (!this.identity && now - this.identityCheckedAt > IDENTITY_RETRY_MS) {
       this.identityCheckedAt = now;
-      this.identity = resolveIdentity().identity;
+      const probe = resolveIdentity();
+      this.identity = probe.identity;
+      this.status.identitySteps = probe.steps;
     }
     this.status.detectedFriendCode = this.identity?.friendCode ?? "";
     return this.identity?.friendCode ?? "";

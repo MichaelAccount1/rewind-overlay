@@ -227,6 +227,17 @@ describe("live polling", () => {
     expect(poller.player.vr).toBe(77770);
   });
 
+  it("exposes the identity trail on status for the Studio troubleshooting panel", async () => {
+    stubRoutes({
+      "https://rwfc.net/api/roomstatus": { rooms: [] },
+      [`https://rwfc.net/api/leaderboard/player/${FC}/history/recent`]: [],
+      [`https://rwfc.net/api/leaderboard/player/${FC}`]: fixture("player.json")
+    });
+    const poller = new PlayerPoller(makeStore(makeConfig()));
+    await poll(poller);
+    expect(poller.status.identitySteps).toEqual([`Using friend code from settings: ${FC}`]);
+  });
+
   it("learns the friend code from a name match in manual mode", async () => {
     stubRoutes({
       "https://rwfc.net/api/roomstatus": fixture("roomstatus.json"),
