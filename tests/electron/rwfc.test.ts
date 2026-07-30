@@ -48,6 +48,35 @@ describe("response parsing (real fixture payloads)", () => {
     expect(status.rooms[0].players[0].vr).toBe(77770);
   });
 
+  it("survives the null-riddled feed that broke v1.0.0 (rk: null etc.)", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => jsonResponse(fixture("roomstatus-dirty.json"))));
+    const status = await fetchRoomStatus(urls);
+
+    // No room may be dropped and no parse error thrown.
+    expect(status.rooms.map((room) => room.id)).toEqual(["KUEJYC", "BATTLE", "WEIRDO"]);
+
+    // Null fields collapse to safe defaults instead of failing the whole feed.
+    const battle = status.rooms[1];
+    expect(battle.rk).toBe("");
+    expect(battle.race).toBeNull();
+    expect(battle.averageVR).toBeNull();
+    expect(battle.players[0]).toMatchObject({
+      pid: "118883",
+      name: "",
+      friendCode: "",
+      vr: 51309, // string in the feed, coerced
+      br: null,
+      isOpenHost: false,
+      mii: null
+    });
+    const weirdo = status.rooms[2];
+    expect(weirdo.players).toEqual([]);
+    expect(weirdo.race?.num).toBeNull();
+
+    // The healthy room is untouched, so the local player is still found.
+    expect(findPlayerInRooms(status, "3951-3710-1436")?.room.id).toBe("KUEJYC");
+  });
+
   it("parses the player profile", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => jsonResponse(fixture("player.json"))));
     const profile = await fetchPlayerProfile(urls, "3951-3710-1436");

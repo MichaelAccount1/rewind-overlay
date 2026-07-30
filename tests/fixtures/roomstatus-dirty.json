@@ -1,0 +1,64 @@
+{
+  "rooms": [
+    {
+      "id": "KUEJYC",
+      "type": "anybody",
+      "created": "2026-07-29T18:02:55.2396027Z",
+      "host": "115",
+      "rk": "vs_10",
+      "players": [
+        {
+          "pid": "110204",
+          "name": "omoney¿",
+          "friendCode": "3951-3710-1436",
+          "vr": 77770,
+          "br": 5000,
+          "isOpenHost": true,
+          "isSuspended": false,
+          "mii": { "data": "gBYAbwBtAG8AbgBlAHkAvwAA", "name": "omoney¿" },
+          "connectionMap": ["2", "2"],
+          "slotId": "115"
+        }
+      ],
+      "averageVR": 60976,
+      "race": { "num": 127, "course": 335, "cc": 2, "trackName": "SW Shroom Ridge / DS Shroom Ridge" },
+      "roomType": "Retro Tracks",
+      "isPublic": true,
+      "isJoinable": true,
+      "isSuspended": false
+    },
+    {
+      "id": "BATTLE",
+      "type": null,
+      "created": null,
+      "host": 22,
+      "rk": null,
+      "players": [
+        {
+          "pid": 118883,
+          "name": null,
+          "friendCode": null,
+          "vr": "51309",
+          "br": null,
+          "isOpenHost": null,
+          "isSuspended": null,
+          "mii": null,
+          "slotId": null
+        }
+      ],
+      "averageVR": null,
+      "race": null,
+      "roomType": null,
+      "isPublic": null,
+      "isJoinable": null,
+      "isSuspended": null
+    },
+    {
+      "id": "WEIRDO",
+      "rk": "vs_14",
+      "players": null,
+      "race": { "num": "not-a-number", "course": null, "cc": null, "trackName": null }
+    }
+  ],
+  "timestamp": null
+}

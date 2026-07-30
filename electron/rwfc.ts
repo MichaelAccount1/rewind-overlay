@@ -26,69 +26,126 @@ export class RwfcHttpError extends Error {
   }
 }
 
-// --- Schemas (deliberately lenient: unknown fields pass through, absent ones default) ---
+// --- Schemas ---------------------------------------------------------------
+// Every field must survive null, absence, and type drift: the live feed sends
+// null for fields like room.rk (battle/private rooms), and a single bad field
+// in one of ~25 rooms must never take down the whole overlay (v1.0.0 bug).
+
+/** string; null/missing/garbage -> fallback */
+const lenientString = (fallback = "") =>
+  z
+    .string()
+    .nullish()
+    .transform((value) => value ?? fallback)
+    .catch(fallback);
+
+/** string from string|number ids; null/missing/garbage -> "" */
+const lenientIdString = z
+  .union([z.string(), z.number()])
+  .nullish()
+  .transform((value) => (value == null ? "" : String(value)))
+  .catch("");
+
+/** number; null/missing/garbage/NaN -> null */
+const lenientNumber = z.coerce
+  .number()
+  .nullish()
+  .transform((value) => (typeof value === "number" && Number.isFinite(value) ? value : null))
+  .catch(null);
+
+/** number; null/missing/garbage/NaN -> 0 */
+const lenientCount = z.coerce
+  .number()
+  .nullish()
+  .transform((value) => (typeof value === "number" && Number.isFinite(value) ? value : 0))
+  .catch(0);
+
+/** boolean; null/missing/garbage -> fallback */
+const lenientBoolean = (fallback: boolean) =>
+  z
+    .boolean()
+    .nullish()
+    .transform((value) => value ?? fallback)
+    .catch(fallback);
 
 const roomPlayerSchema = z.object({
-  pid: z.coerce.string().default(""),
-  name: z.string().default(""),
-  friendCode: z.string().default(""),
-  vr: z.coerce.number().nullish(),
-  br: z.coerce.number().nullish(),
-  isOpenHost: z.boolean().default(false),
-  isSuspended: z.boolean().default(false),
-  mii: z.object({ data: z.string().default(""), name: z.string().default("") }).nullish(),
-  slotId: z.coerce.string().default("")
+  pid: lenientIdString,
+  name: lenientString(),
+  friendCode: lenientString(),
+  vr: lenientNumber,
+  br: lenientNumber,
+  isOpenHost: lenientBoolean(false),
+  isSuspended: lenientBoolean(false),
+  mii: z
+    .object({ data: lenientString(), name: lenientString() })
+    .nullish()
+    .catch(null)
+    .transform((value) => value ?? null),
+  slotId: lenientIdString
 });
 
 const roomSchema = z.object({
-  id: z.string().default(""),
-  type: z.string().default(""),
-  created: z.string().default(""),
-  host: z.coerce.string().default(""),
-  rk: z.string().default(""),
-  players: z.array(roomPlayerSchema).default([]),
-  averageVR: z.coerce.number().nullish(),
+  id: lenientString(),
+  type: lenientString(),
+  created: lenientString(),
+  host: lenientIdString,
+  rk: lenientString(),
+  players: z
+    .array(roomPlayerSchema)
+    .nullish()
+    .transform((value) => value ?? [])
+    .catch([]),
+  averageVR: lenientNumber,
   race: z
     .object({
-      num: z.coerce.number().nullish(),
-      course: z.coerce.number().nullish(),
-      cc: z.coerce.number().nullish(),
-      trackName: z.string().nullish()
+      num: lenientNumber,
+      course: lenientNumber,
+      cc: lenientNumber,
+      trackName: lenientString()
     })
-    .nullish(),
-  roomType: z.string().default(""),
-  isPublic: z.boolean().default(true),
-  isJoinable: z.boolean().default(true),
-  isSuspended: z.boolean().default(false)
+    .nullish()
+    .catch(null)
+    .transform((value) => value ?? null),
+  roomType: lenientString(),
+  isPublic: lenientBoolean(true),
+  isJoinable: lenientBoolean(true),
+  isSuspended: lenientBoolean(false)
 });
 
 const roomStatusSchema = z.object({
-  rooms: z.array(roomSchema).default([]),
-  timestamp: z.string().nullish()
+  rooms: z
+    .array(roomSchema)
+    .nullish()
+    .transform((value) => value ?? [])
+    .catch([]),
+  timestamp: lenientString().nullish()
 });
 
 const vrStatsSchema = z.object({
-  last24Hours: z.coerce.number().default(0),
-  lastWeek: z.coerce.number().default(0),
-  lastMonth: z.coerce.number().default(0)
+  last24Hours: lenientCount,
+  lastWeek: lenientCount,
+  lastMonth: lenientCount
 });
 
 const playerProfileSchema = z.object({
-  pid: z.coerce.string().default(""),
-  name: z.string().default(""),
-  friendCode: z.string().default(""),
-  vr: z.coerce.number().default(0),
-  rank: z.coerce.number().nullish(),
-  lastSeen: z.string().nullish(),
-  isSuspicious: z.boolean().default(false),
-  vrStats: vrStatsSchema.nullish(),
-  miiImageBase64: z.string().nullish()
+  pid: lenientIdString,
+  name: lenientString(),
+  friendCode: lenientString(),
+  vr: lenientCount,
+  rank: lenientNumber,
+  lastSeen: lenientString().nullish(),
+  isSuspicious: lenientBoolean(false),
+  vrStats: vrStatsSchema
+    .nullish()
+    .catch(null)
+    .transform((value) => value ?? null),
+  miiImageBase64: lenientString().nullish()
 });
 
 const historyEntrySchema = z.object({
-  date: z.string().default(""),
-  vrChange: z.coerce.number().default(0),
-  totalVR: z.coerce.number().default(0)
+  date: lenientString(),
+  vrChange: lenientCount,
+  totalVR: lenientCount
 });
 
 export type RoomStatus = z.infer<typeof roomStatusSchema>;

@@ -5,6 +5,30 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PlayerPoller } from "../../electron/poller.js";
 import { defaultConfig, type OverlayConfig } from "../../electron/models.js";
 import type { ConfigStore } from "../../electron/store.js";
+import type { IdentityProbe } from "../../electron/identity.js";
+
+// Identity resolution reads real machine state; tests must control it.
+const { resolveIdentityMock } = vi.hoisted(() => ({ resolveIdentityMock: vi.fn() }));
+vi.mock("../../electron/identity.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../electron/identity.js")>();
+  return { ...actual, resolveIdentity: resolveIdentityMock };
+});
+
+const noInstallProbe: IdentityProbe = { identity: null, steps: ["WheelWizard folder not found (mock)"] };
+const foundProbe: IdentityProbe = {
+  identity: {
+    friendCode: "3951-3710-1436",
+    pid: 110204,
+    name: "omoney¿",
+    slot: 0,
+    vr: 77000,
+    br: 5000,
+    savePath: "C:\\mock\\rksys.dat",
+    saveModifiedAt: "2026-07-30T00:00:00.000Z",
+    licenses: []
+  },
+  steps: ["License slot 0 \"omoney¿\" -> friend code 3951-3710-1436 (mock)"]
+};
 
 const fixture = (name: string): unknown =>
   JSON.parse(fs.readFileSync(path.join(__dirname, "..", "fixtures", name), "utf8"));
@@ -18,8 +42,18 @@ function makeConfig(patch: Partial<OverlayConfig["identity"]> = {}): OverlayConf
   return config;
 }
 
-function makeStore(config: OverlayConfig): ConfigStore {
-  return { get: () => structuredClone(config) } as unknown as ConfigStore;
+/** Fake store whose update() mutates the held config, like the real one. */
+function makeStore(config: OverlayConfig): ConfigStore & { updates: unknown[] } {
+  const updates: unknown[] = [];
+  return {
+    get: () => structuredClone(config),
+    update: (patch: { data?: Partial<OverlayConfig["data"]> }) => {
+      updates.push(patch);
+      if (patch?.data) Object.assign(config.data, patch.data);
+      return structuredClone(config);
+    },
+    updates
+  } as unknown as ConfigStore & { updates: unknown[] };
 }
 
 /** URL-keyed fetch mock; tests mutate `routes` between polls to simulate server change. */
@@ -47,6 +81,8 @@ const poll = (poller: PlayerPoller): Promise<void> =>
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date("2026-07-30T02:00:00Z"));
+  resolveIdentityMock.mockReset();
+  resolveIdentityMock.mockReturnValue(noInstallProbe);
 });
 
 afterEach(() => {
@@ -65,6 +101,82 @@ describe("demo mode", () => {
     expect(poller.status.phase).toBe("connected");
     expect(poller.player.source).toBe("demo");
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("auto-switches preview to live once a license is detected (auto mode)", async () => {
+    resolveIdentityMock.mockReturnValue(foundProbe);
+    stubRoutes({
+      "https://rwfc.net/api/roomstatus": fixture("roomstatus.json"),
+      [`https://rwfc.net/api/leaderboard/player/${FC}/history/recent`]: fixture("history-recent.json"),
+      [`https://rwfc.net/api/leaderboard/player/${FC}`]: fixture("player.json")
+    });
+    const config = makeConfig({ mode: "auto", friendCode: "" });
+    config.data.demoMode = true;
+    const store = makeStore(config);
+    const poller = new PlayerPoller(store);
+
+    await poll(poller); // license found -> preview flips off
+    expect(config.data.demoMode).toBe(false);
+    expect(store.updates).toEqual([{ data: { demoMode: false } }]);
+    expect(poller.status.message).toContain("switching to live data");
+    expect(poller.status.detectedFriendCode).toBe(FC);
+    expect(poller.status.identitySteps).toEqual(foundProbe.steps);
+
+    await poll(poller); // next tick is live
+    expect(poller.player.source).toBe("rwfc");
+    expect(poller.player.vr).toBe(77770);
+    expect(poller.player.rank).toBe(408);
+  });
+
+  it("keeps probing while preview is on and no install exists yet", async () => {
+    const config = makeConfig({ mode: "auto", friendCode: "" });
+    config.data.demoMode = true;
+    const store = makeStore(config);
+    const poller = new PlayerPoller(store);
+
+    await poll(poller);
+    expect(config.data.demoMode).toBe(true);
+    expect(poller.player.source).toBe("demo");
+    expect(poller.status.identitySteps).toEqual(noInstallProbe.steps);
+    expect(resolveIdentityMock).toHaveBeenCalledTimes(1);
+
+    // WheelWizard gets set up mid-session; the next probe (15 s cadence) finds it.
+    resolveIdentityMock.mockReturnValue(foundProbe);
+    vi.setSystemTime(new Date("2026-07-30T02:00:20Z"));
+    await poll(poller);
+    expect(config.data.demoMode).toBe(false);
+  });
+
+  it("does not fight the user: re-enabled preview stays in preview", async () => {
+    resolveIdentityMock.mockReturnValue(foundProbe);
+    stubRoutes({
+      "https://rwfc.net/api/roomstatus": fixture("roomstatus.json"),
+      [`https://rwfc.net/api/leaderboard/player/${FC}/history/recent`]: fixture("history-recent.json"),
+      [`https://rwfc.net/api/leaderboard/player/${FC}`]: fixture("player.json")
+    });
+    const config = makeConfig({ mode: "auto", friendCode: "" });
+    config.data.demoMode = true;
+    const store = makeStore(config);
+    const poller = new PlayerPoller(store);
+
+    await poll(poller); // auto-exit consumed
+    expect(config.data.demoMode).toBe(false);
+
+    config.data.demoMode = true; // user turns preview back on in Studio
+    await poll(poller);
+    expect(config.data.demoMode).toBe(true);
+    expect(poller.player.source).toBe("demo");
+    expect(store.updates).toHaveLength(1); // no second forced exit
+  });
+
+  it("never auto-exits preview for explicit friend-code or manual identities", async () => {
+    resolveIdentityMock.mockReturnValue(foundProbe);
+    const config = makeConfig(); // mode: "friendCode"
+    config.data.demoMode = true;
+    const poller = new PlayerPoller(makeStore(config));
+    await poll(poller);
+    expect(config.data.demoMode).toBe(true);
+    expect(poller.player.source).toBe("demo");
   });
 });
 

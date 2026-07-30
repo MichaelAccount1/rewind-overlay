@@ -32,6 +32,7 @@ import {
 
 const PROFILE_INTERVAL_MS = 60_000; // rank/vrStats only refresh server-side once a minute
 const IDENTITY_RETRY_MS = 60_000;
+const DEMO_IDENTITY_RETRY_MS = 15_000; // snappier probing so preview goes live soon after WhWz setup
 const RECONCILE_RETRY_MS = 15_000;
 const HISTORY_COUNT = 12;
 
@@ -82,6 +83,12 @@ export class PlayerPoller extends EventEmitter {
   private lastRace: TrackedRace | null = null;
   private sessionStartVr: number | null = null;
   private manualModeFriendCode = "";
+  /**
+   * Preview auto-exits to live data once per process when a license is found,
+   * so first-run users never sit on fake numbers. Deliberately NOT reset by
+   * restart(): re-enabling preview in Studio afterwards must stick.
+   */
+  private demoAutoExited = false;
 
   constructor(private readonly store: ConfigStore) {
     super();
@@ -168,6 +175,31 @@ export class PlayerPoller extends EventEmitter {
   }
 
   private pollDemo(config: OverlayConfig): void {
+    // Preview keeps probing for a real identity (local files only, no network)
+    // so a first-run user goes live automatically once WheelWizard/RR is set up.
+    if (config.identity.mode === "auto") {
+      const now = Date.now();
+      if (!this.identity && now - this.identityCheckedAt > DEMO_IDENTITY_RETRY_MS) {
+        this.identityCheckedAt = now;
+        const probe = resolveIdentity();
+        this.identity = probe.identity;
+        this.status.identitySteps = probe.steps;
+      }
+      this.status.detectedFriendCode = this.identity?.friendCode ?? "";
+      if (this.identity && !this.demoAutoExited) {
+        this.demoAutoExited = true;
+        this.store.update({ data: { demoMode: false } });
+        this.status = {
+          ...this.status,
+          phase: "connected",
+          message: `License "${this.identity.name}" detected -- switching to live data`,
+          consecutiveErrors: 0,
+          lastSuccessAt: new Date().toISOString()
+        };
+        this.emit("change");
+        return; // next tick reads the updated config and takes the live path
+      }
+    }
     this.player = {
       ...this.player,
       name: config.identity.playerName || this.player.name,
