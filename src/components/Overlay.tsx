@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { API_ORIGIN } from "../api";
 import type { Snapshot } from "../types";
+import { overlayCardHeight } from "../../electron/overlay-layout";
 
 type Vars = CSSProperties & Record<`--${string}`, string | number>;
 
@@ -54,6 +55,7 @@ export function Overlay({ snapshot, desktop = false, preview = false }: {
     config.visibility.dailyDelta && Boolean(extras?.vrStats)
   ].filter(Boolean).length;
   const background = config.background;
+  const zoomPan = Math.max(0, background.zoom - 1) * 50;
   const border = config.border;
   const reduce = config.animations.reducedMotion;
   const style = useMemo<Vars>(() => ({
@@ -74,6 +76,8 @@ export function Overlay({ snapshot, desktop = false, preview = false }: {
     "--bg-fit": background.fit === "stretch" ? "100% 100%" : background.fit,
     "--bg-x": `${background.x}%`,
     "--bg-y": `${background.y}%`,
+    "--bg-pan-x": `${((50 - background.x) / 50) * zoomPan}%`,
+    "--bg-pan-y": `${((50 - background.y) / 50) * zoomPan}%`,
     "--bg-zoom": background.zoom,
     "--bg-blur": `${background.blur}px`,
     "--bg-brightness": background.brightness,
@@ -82,8 +86,9 @@ export function Overlay({ snapshot, desktop = false, preview = false }: {
     "--overlay-color": background.overlayColor,
     "--overlay-opacity": background.overlayOpacity,
     "--glass": background.glass,
+    "--card-height": `${overlayCardHeight(config.layout.compact, contextCount)}px`,
     "--animation-duration": `${reduce ? 0 : config.animations.durationMs}ms`
-  }), [background, border, config, preview, reduce]);
+  }), [background, border, config, contextCount, preview, reduce, zoomPan]);
 
   return (
     <section
@@ -152,7 +157,7 @@ export function Overlay({ snapshot, desktop = false, preview = false }: {
                     />
                   </div>
                   {config.visibility.delta && player.vrDelta !== null && (
-                    <div key={player.vrDelta + player.updatedAt} className={`delta ${deltaPositive ? "positive" : "negative"}`}>
+                    <div key={`${player.vr}-${player.vrDelta}`} className={`delta ${deltaPositive ? "positive" : "negative"}`}>
                       <span className="delta-arrow">{deltaPositive ? "▲" : "▼"}</span>
                       {deltaPositive ? "+" : ""}{player.vrDelta.toLocaleString()}
                     </div>
@@ -161,7 +166,7 @@ export function Overlay({ snapshot, desktop = false, preview = false }: {
               )}
               <div className="meta-line">
                 {config.visibility.rank && (
-                  <div key={`${player.rank}-${player.updatedAt}`} className={`rank-chip anim-${config.animations.rank}`}>
+                  <div key={player.rank ?? "unranked"} className={`rank-chip anim-${config.animations.rank}`}>
                     <span>{formatRank(player.rank)}</span>
                     {config.visibility.rankDelta && player.rankDelta !== null && player.rankDelta !== 0 && (
                       <b className={rankPositive ? "positive" : "negative"}>
@@ -176,13 +181,13 @@ export function Overlay({ snapshot, desktop = false, preview = false }: {
           </div>
           {player.source === "demo" && <div className="preview-mode-pill">PREVIEW MODE</div>}
           {Math.abs(player.vrDelta ?? 0) >= config.animations.celebrateThreshold && player.vrDelta! > 0 && (
-            <div key={`burst-${player.updatedAt}`} className="celebration" aria-hidden="true">
+            <div key={`burst-${player.vr}-${player.vrDelta}`} className="celebration" aria-hidden="true">
               {Array.from({ length: 12 }, (_, index) => <i key={index} />)}
             </div>
           )}
         </article>
+        {desktop && !config.desktop.clickThrough && <div className="drag-hint">DRAG TO MOVE</div>}
       </div>
-      {desktop && !config.desktop.clickThrough && <div className="drag-hint">DRAG TO MOVE</div>}
     </section>
   );
 }

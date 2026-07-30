@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.2
+
+- Give the floating overlay a glow-aware transparent gutter so animated light is never clipped by the native window.
+- Make the floating overlay self-sizing and non-resizable while preserving its screen position as its content changes.
+- Stop rank, last-race VR, and celebration animations from replaying after unchanged background polls.
+- Pan uploaded backgrounds on both axes after zooming, in both **Cover** and **Contain** modes.
+- Add native-renderer checks for transparent glow boundaries and two-axis background movement.
+
 ## 1.0.1
 
 - Accept nullable and inconsistent optional fields from the live RWFC room-status API instead of stopping updates.

@@ -61,4 +61,51 @@ describe("Overlay", () => {
     expect(screen.getByText("Retro Tracks")).toBeInTheDocument();
     expect(container.querySelector(".overlay-card")).toHaveClass("context-dense");
   });
+
+  it("does not replay delta, rank, or celebration animations for a timestamp-only poll", () => {
+    const config = structuredClone(defaultConfig);
+    config.animations.celebrateThreshold = 40;
+    const player = structuredClone(defaultPlayer);
+    const { container, rerender } = render(<Overlay snapshot={snapshot({ config, player })} preview />);
+    const delta = screen.getByText("+41");
+    const rank = screen.getByText("#279").closest(".rank-chip");
+    const celebration = container.querySelector(".celebration");
+
+    rerender(<Overlay snapshot={snapshot({
+      config,
+      player: { ...player, updatedAt: new Date(Date.now() + 5_000).toISOString() }
+    })} preview />);
+
+    expect(screen.getByText("+41")).toBe(delta);
+    expect(screen.getByText("#279").closest(".rank-chip")).toBe(rank);
+    expect(container.querySelector(".celebration")).toBe(celebration);
+  });
+
+  it("restarts value animations when the displayed race values actually change", () => {
+    const player = structuredClone(defaultPlayer);
+    const { rerender } = render(<Overlay snapshot={snapshot({ player })} preview />);
+    const delta = screen.getByText("+41");
+    const rank = screen.getByText("#279").closest(".rank-chip");
+
+    rerender(<Overlay snapshot={snapshot({
+      player: { ...player, vr: 87_805, vrDelta: 58, rank: 277 }
+    })} preview />);
+
+    expect(screen.getByText("+58")).not.toBe(delta);
+    expect(screen.getByText("#277").closest(".rank-chip")).not.toBe(rank);
+  });
+
+  it("provides two-axis zoom pan in both cover and contain modes", () => {
+    const config = structuredClone(defaultConfig);
+    config.background = { ...config.background, fit: "cover", zoom: 1.8, x: 25, y: 75 };
+    const { container, rerender } = render(<Overlay snapshot={snapshot({ config })} preview />);
+    const stage = container.querySelector<HTMLElement>(".overlay-stage")!;
+    expect(stage.style.getPropertyValue("--bg-pan-x")).toBe("20%");
+    expect(stage.style.getPropertyValue("--bg-pan-y")).toBe("-20%");
+
+    config.background = { ...config.background, fit: "contain" };
+    rerender(<Overlay snapshot={snapshot({ config })} preview />);
+    expect(stage.style.getPropertyValue("--bg-pan-x")).toBe("20%");
+    expect(stage.style.getPropertyValue("--bg-pan-y")).toBe("-20%");
+  });
 });

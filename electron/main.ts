@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { ConfigStore } from "./store.js";
 import { PlayerPoller } from "./poller.js";
 import { LocalServer, OVERLAY_PORT } from "./server.js";
+import { overlayWindowSize } from "./overlay-layout.js";
 
 const isDevelopment = Boolean(process.env.VITE_DEV_SERVER_URL);
 let studioWindow: BrowserWindow | null = null;
@@ -19,21 +20,6 @@ const resourcePath = (name: string): string =>
   app.isPackaged
     ? path.join(process.resourcesPath, name)
     : path.join(moduleDirectory, "..", "build", name);
-
-function overlayWindowHeight(config: ReturnType<ConfigStore["get"]>): number {
-  const contextCount = [
-    config.visibility.room,
-    config.visibility.track,
-    config.visibility.sessionDelta,
-    config.visibility.dailyDelta
-  ].filter(Boolean).length;
-  const cardHeight = contextCount > 2
-    ? (config.layout.compact ? 186 : 198)
-    : contextCount > 0
-      ? (config.layout.compact ? 160 : 176)
-      : (config.layout.compact ? 118 : 150);
-  return Math.round((cardHeight + 8) * config.layout.scale);
-}
 
 const appUrl = (route: string): string =>
   isDevelopment ? `${process.env.VITE_DEV_SERVER_URL}${route}` : `http://127.0.0.1:${OVERLAY_PORT}${route}`;
@@ -65,10 +51,10 @@ function createStudio(): BrowserWindow {
 function createOverlay(): BrowserWindow {
   if (overlayWindow && !overlayWindow.isDestroyed()) return overlayWindow;
   const config = store.get();
+  const size = overlayWindowSize(config);
   overlayWindow = new BrowserWindow({
-    width: Math.round(config.layout.width * config.layout.scale),
-    height: overlayWindowHeight(config),
-    minWidth: 280, minHeight: 80, transparent: true, frame: false, resizable: true,
+    width: size.width, height: size.height,
+    transparent: true, frame: false, resizable: false, maximizable: false, fullscreenable: false,
     alwaysOnTop: config.desktop.alwaysOnTop, skipTaskbar: !config.desktop.showInTaskbar,
     hasShadow: false, backgroundColor: "#00000000", show: false, icon: resourcePath("icon.png"),
     webPreferences: { contextIsolation: true, sandbox: true }
@@ -89,11 +75,14 @@ function updateOverlay(): void {
   overlayWindow.setIgnoreMouseEvents(config.desktop.clickThrough, { forward: true });
   overlayWindow.setSkipTaskbar(!config.desktop.showInTaskbar);
   overlayWindow.setOpacity(config.desktop.opacity);
-  overlayWindow.setSize(
-    Math.round(config.layout.width * config.layout.scale),
-    overlayWindowHeight(config),
-    true
-  );
+  const size = overlayWindowSize(config);
+  const bounds = overlayWindow.getBounds();
+  overlayWindow.setBounds({
+    x: Math.round(bounds.x + (bounds.width - size.width) / 2),
+    y: Math.round(bounds.y + (bounds.height - size.height) / 2),
+    width: size.width,
+    height: size.height
+  });
 }
 
 function refreshTrayMenu(): void {
