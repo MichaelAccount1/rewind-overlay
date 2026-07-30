@@ -6,6 +6,13 @@ export function App() {
   const { snapshot, error } = useSnapshot();
   const overlayRoute = window.location.pathname.startsWith("/overlay");
 
+  // Electron's transparent BrowserWindow still paints the HTML canvas unless
+  // its root surface is explicitly cleared after the overlay route mounts.
+  if (overlayRoute) {
+    document.documentElement.style.background = "transparent";
+    document.body.style.background = "transparent";
+  }
+
   if (!snapshot) {
     return overlayRoute
       ? null

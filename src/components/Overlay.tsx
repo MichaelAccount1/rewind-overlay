@@ -47,6 +47,12 @@ export function Overlay({ snapshot, desktop = false, preview = false }: {
   const rankPositive = (player.rankDelta ?? 0) >= 0;
   const extras = player.extras;
   const name = [config.visibility.tag ? config.identity.tag || player.tag : "", player.name].filter(Boolean).join(" ");
+  const contextCount = [
+    config.visibility.room && Boolean(player.room),
+    config.visibility.track && Boolean(extras?.trackName),
+    config.visibility.sessionDelta && extras?.sessionDelta !== null && extras?.sessionDelta !== undefined,
+    config.visibility.dailyDelta && Boolean(extras?.vrStats)
+  ].filter(Boolean).length;
   const background = config.background;
   const border = config.border;
   const reduce = config.animations.reducedMotion;
@@ -86,7 +92,12 @@ export function Overlay({ snapshot, desktop = false, preview = false }: {
       aria-label={`Retro Rewind player overlay for ${player.name}`}
     >
       <div className={`overlay-shell border-${border.effect} ${border.glow ? "has-glow" : ""}`}>
-        <article className={`overlay-card ${config.layout.compact ? "is-compact" : ""}`}>
+        <article className={[
+          "overlay-card",
+          config.layout.compact ? "is-compact" : "",
+          contextCount > 0 ? "has-context" : "",
+          contextCount > 2 ? "context-dense" : ""
+        ].filter(Boolean).join(" ")}>
           <div
             className="background-layer"
             style={background.imageUrl ? {
@@ -114,7 +125,7 @@ export function Overlay({ snapshot, desktop = false, preview = false }: {
                 {(config.visibility.room || config.visibility.track || config.visibility.sessionDelta || config.visibility.dailyDelta) && (
                   <div className="context-line">
                     {config.visibility.room && player.room && <span>{player.room}</span>}
-                    {config.visibility.track && extras?.trackName && <span>{extras.trackName}</span>}
+                    {config.visibility.track && extras?.trackName && <span className="context-track">{extras.trackName}</span>}
                     {config.visibility.sessionDelta && extras?.sessionDelta !== null && extras?.sessionDelta !== undefined && (
                       <span className={extras.sessionDelta >= 0 ? "positive" : "negative"}>
                         SESSION {extras.sessionDelta >= 0 ? "+" : ""}{extras.sessionDelta.toLocaleString()}
@@ -133,7 +144,7 @@ export function Overlay({ snapshot, desktop = false, preview = false }: {
             <div className="rating-block">
               {config.visibility.vr && (
                 <div className="vr-line">
-                  <div className="vr-value">
+                  <div className={`vr-value ${(player.vrDelta ?? 0) < 0 ? "change-negative" : "change-positive"}`}>
                     <AnimatedNumber
                       value={player.vr}
                       animation={config.animations.vr}
@@ -163,6 +174,7 @@ export function Overlay({ snapshot, desktop = false, preview = false }: {
               </div>
             </div>
           </div>
+          {player.source === "demo" && <div className="preview-mode-pill">PREVIEW MODE</div>}
           {Math.abs(player.vrDelta ?? 0) >= config.animations.celebrateThreshold && player.vrDelta! > 0 && (
             <div key={`burst-${player.updatedAt}`} className="celebration" aria-hidden="true">
               {Array.from({ length: 12 }, (_, index) => <i key={index} />)}

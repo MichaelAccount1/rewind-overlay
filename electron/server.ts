@@ -2,7 +2,7 @@ import express, { type Express } from "express";
 import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import type { BrowserWindow } from "electron";
+import { app, type BrowserWindow } from "electron";
 import type { ConfigStore } from "./store.js";
 import type { PlayerPoller } from "./poller.js";
 
@@ -23,7 +23,8 @@ export class LocalServer {
   constructor(
     private readonly store: ConfigStore,
     private readonly poller: PlayerPoller,
-    private readonly windows: WindowActions
+    private readonly windows: WindowActions,
+    private readonly port = OVERLAY_PORT
   ) {
     this.web = express();
     this.web.disable("x-powered-by");
@@ -43,7 +44,7 @@ export class LocalServer {
 
   async start(): Promise<void> {
     await new Promise<void>((resolve, reject) => {
-      this.server = this.web.listen(OVERLAY_PORT, "127.0.0.1", () => resolve());
+      this.server = this.web.listen(this.port, "127.0.0.1", () => resolve());
       this.server.once("error", reject);
     });
   }
@@ -58,7 +59,7 @@ export class LocalServer {
   }
 
   private routes(): void {
-    this.web.get("/api/health", (_req, res) => res.json({ ok: true, version: "1.0.0" }));
+    this.web.get("/api/health", (_req, res) => res.json({ ok: true, version: app.getVersion() }));
     this.web.get("/api/snapshot", (_req, res) => res.json(this.snapshot()));
     this.web.get("/api/events", (req, res) => {
       res.setHeader("Content-Type", "text/event-stream");

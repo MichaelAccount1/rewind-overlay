@@ -202,7 +202,16 @@ function IdentityPanel({ config, status, patch }: { config: OverlayConfig; statu
           ]} />
         </Field>
         {config.identity.mode === "auto" && (
-          <div className="detection-box"><span className={status.detectedFriendCode ? "ok" : ""}>◎</span><div><b>{status.detectedFriendCode ? "Wheel Wizard license detected" : "Waiting for a local license"}</b><small>{status.detectedFriendCode || "Open Wheel Wizard once, or choose Friend code above."}</small></div></div>
+          <div className="detection-box"><span className={status.detectedFriendCode ? "ok" : ""}>◎</span><div>
+            <b>{status.detectedFriendCode
+              ? "Wheel Wizard license detected"
+              : config.data.demoMode
+                ? "Preview mode — watching for Wheel Wizard"
+                : "Waiting for a local license"}</b>
+            <small>{status.detectedFriendCode || (config.data.demoMode
+              ? "Sample data is labeled on the badge and switches to live automatically when a license is found."
+              : "Open Wheel Wizard once, or choose Friend code above.")}</small>
+          </div></div>
         )}
         {status.identitySteps && status.identitySteps.length > 0 && (
           <details className="identity-trail">
@@ -228,7 +237,7 @@ function IdentityPanel({ config, status, patch }: { config: OverlayConfig; statu
         <Field wide label="Room status endpoint"><input className="text-input url" value={config.data.groupsUrl} onChange={(event) => patch("data", "groupsUrl", event.target.value)} /></Field>
         <Field wide label="Player endpoint" hint="Use {friendCode} as the player placeholder"><input className="text-input url" value={config.data.leaderboardUrl} onChange={(event) => patch("data", "leaderboardUrl", event.target.value)} /></Field>
         <Field label="Poll interval" hint="Be considerate of the community service"><Range value={config.data.pollSeconds} min={3} max={30} unit="s" onChange={(value) => patch("data", "pollSeconds", value)} /></Field>
-        <Field label="Preview mode" hint="Disable to begin official live polling"><Toggle label="Preview mode" checked={config.data.demoMode} onChange={(value) => patch("data", "demoMode", value)} /></Field>
+        <Field label="Preview mode" hint="Shows labeled sample data while automatic detection watches for a real license"><Toggle label="Preview mode" checked={config.data.demoMode} onChange={(value) => patch("data", "demoMode", value)} /></Field>
       </Section>
     </>
   );

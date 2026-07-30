@@ -5,6 +5,7 @@ export const API_ORIGIN = window.location.port === "5173" ? "http://127.0.0.1:19
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_ORIGIN}${path}`, {
     ...options,
+    cache: "no-store",
     headers: { "Content-Type": "application/json", ...options?.headers }
   });
   if (!response.ok) {
@@ -28,4 +29,3 @@ export const api = {
   window: (action: "show" | "hide" | "center" | "clickthrough", body?: unknown) =>
     request<{ ok: boolean }>(`/api/window/${action}`, { method: "POST", body: JSON.stringify(body ?? {}) })
 };
-

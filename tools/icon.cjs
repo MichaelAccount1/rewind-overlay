@@ -5,8 +5,10 @@ const sharp = require("sharp");
 const root = path.resolve(__dirname, "..");
 
 async function renderIcon() {
-  const svg = fs.readFileSync(path.join(root, "build", "icon.svg"), "utf8");
-  await sharp(Buffer.from(svg)).resize(512, 512).png().toFile(path.join(root, "build", "icon.png"));
+  for (const [name, size] of [["icon", 512], ["tray", 64]]) {
+    const svg = fs.readFileSync(path.join(root, "build", `${name}.svg`), "utf8");
+    await sharp(Buffer.from(svg)).resize(size, size).png().toFile(path.join(root, "build", `${name}.png`));
+  }
 }
 
 renderIcon().catch((error) => {

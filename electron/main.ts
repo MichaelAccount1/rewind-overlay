@@ -1,4 +1,6 @@
 import { app, BrowserWindow, Menu, nativeImage, shell, Tray } from "electron";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { ConfigStore } from "./store.js";
 import { PlayerPoller } from "./poller.js";
 import { LocalServer, OVERLAY_PORT } from "./server.js";
@@ -11,6 +13,27 @@ let store: ConfigStore;
 let poller: PlayerPoller;
 let server: LocalServer;
 let quitting = false;
+const moduleDirectory = path.dirname(fileURLToPath(import.meta.url));
+
+const resourcePath = (name: string): string =>
+  app.isPackaged
+    ? path.join(process.resourcesPath, name)
+    : path.join(moduleDirectory, "..", "build", name);
+
+function overlayWindowHeight(config: ReturnType<ConfigStore["get"]>): number {
+  const contextCount = [
+    config.visibility.room,
+    config.visibility.track,
+    config.visibility.sessionDelta,
+    config.visibility.dailyDelta
+  ].filter(Boolean).length;
+  const cardHeight = contextCount > 2
+    ? (config.layout.compact ? 186 : 198)
+    : contextCount > 0
+      ? (config.layout.compact ? 160 : 176)
+      : (config.layout.compact ? 118 : 150);
+  return Math.round((cardHeight + 8) * config.layout.scale);
+}
 
 const appUrl = (route: string): string =>
   isDevelopment ? `${process.env.VITE_DEV_SERVER_URL}${route}` : `http://127.0.0.1:${OVERLAY_PORT}${route}`;
@@ -24,6 +47,7 @@ function createStudio(): BrowserWindow {
   studioWindow = new BrowserWindow({
     width: 1280, height: 820, minWidth: 980, minHeight: 680,
     backgroundColor: "#090b12", title: "Rewind Overlay Studio", show: false,
+    icon: resourcePath("icon.png"),
     webPreferences: { contextIsolation: true, sandbox: true }
   });
   void studioWindow.loadURL(appUrl("/studio"));
@@ -43,10 +67,10 @@ function createOverlay(): BrowserWindow {
   const config = store.get();
   overlayWindow = new BrowserWindow({
     width: Math.round(config.layout.width * config.layout.scale),
-    height: Math.round((config.layout.compact ? 126 : 158) * config.layout.scale),
+    height: overlayWindowHeight(config),
     minWidth: 280, minHeight: 80, transparent: true, frame: false, resizable: true,
     alwaysOnTop: config.desktop.alwaysOnTop, skipTaskbar: !config.desktop.showInTaskbar,
-    hasShadow: false, backgroundColor: "#00000000", show: false,
+    hasShadow: false, backgroundColor: "#00000000", show: false, icon: resourcePath("icon.png"),
     webPreferences: { contextIsolation: true, sandbox: true }
   });
   overlayWindow.setAlwaysOnTop(config.desktop.alwaysOnTop, "screen-saver");
@@ -67,7 +91,7 @@ function updateOverlay(): void {
   overlayWindow.setOpacity(config.desktop.opacity);
   overlayWindow.setSize(
     Math.round(config.layout.width * config.layout.scale),
-    Math.round((config.layout.compact ? 126 : 158) * config.layout.scale),
+    overlayWindowHeight(config),
     true
   );
 }
@@ -95,8 +119,10 @@ function refreshTrayMenu(): void {
 }
 
 function createTray(): void {
-  const traySvg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><defs><linearGradient id="g"><stop stop-color="#27d9fa"/><stop offset=".55" stop-color="#7168ff"/><stop offset="1" stop-color="#ff7347"/></linearGradient></defs><rect width="32" height="32" rx="9" fill="url(#g)"/><text x="6" y="22" fill="white" font-family="Arial" font-size="15" font-weight="700">RR</text></svg>`;
-  const icon = nativeImage.createFromDataURL(`data:image/svg+xml;base64,${Buffer.from(traySvg).toString("base64")}`);
+  const source = nativeImage.createFromPath(resourcePath("tray.png"));
+  const icon = nativeImage.createEmpty();
+  icon.addRepresentation({ scaleFactor: 1, buffer: source.resize({ width: 16, height: 16, quality: "best" }).toPNG() });
+  icon.addRepresentation({ scaleFactor: 2, buffer: source.resize({ width: 32, height: 32, quality: "best" }).toPNG() });
   tray = new Tray(icon);
   tray.setToolTip("Rewind Overlay");
   refreshTrayMenu();
@@ -112,6 +138,7 @@ if (!ownsInstance) {
 
 app.whenReady().then(async () => {
   if (!ownsInstance) return;
+  app.setAppUserModelId("net.rewindoverlay.app");
   store = new ConfigStore();
   poller = new PlayerPoller(store);
   server = new LocalServer(store, poller, {

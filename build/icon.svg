@@ -17,7 +17,6 @@
   </defs>
   <rect x="25" y="25" width="462" height="462" rx="126" fill="url(#prism)" opacity=".42" filter="url(#glow)"/>
   <rect x="37" y="37" width="438" height="438" rx="115" fill="url(#surface)" stroke="url(#prism)" stroke-width="16"/>
-  <path d="M139 344V168h90c47 0 76 24 76 65 0 28-14 49-39 59l50 52h-58l-42-46h-30v46h-47Zm47-88h40c21 0 32-8 32-24 0-15-11-23-32-23h-40v47Z" fill="#fff"/>
-  <path d="M302 344V168h71c55 0 91 35 91 88s-36 88-91 88h-71Zm47-42h22c29 0 46-17 46-46 0-30-17-46-46-46h-22v92Z" fill="#fff" opacity=".92"/>
-  <circle cx="407" cy="116" r="18" fill="#31e6ff"/>
+  <path d="M139 344V168h90c47 0 76 24 76 65 0 28-14 49-39 59l50 52h-58l-42-46h-30v46h-47Zm47-88h40c21 0 32-8 32-24 0-15-11-23-32-23h-40v47Z" fill="#fff" transform="translate(28)"/>
+  <circle cx="381" cy="139" r="16" fill="#31e6ff"/>
 </svg>

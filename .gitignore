@@ -7,7 +7,6 @@ coverage/
 .DS_Store
 .vite/
 .capture-data/
-/build/icon.png
 
 # User-supplied/runtime files that are not part of the application
 /6.12.2 Full/

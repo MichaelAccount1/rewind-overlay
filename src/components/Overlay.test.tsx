@@ -25,6 +25,7 @@ describe("Overlay", () => {
     expect(screen.getByText("87,747")).toBeInTheDocument();
     expect(screen.getByText("+41")).toBeInTheDocument();
     expect(screen.getByText("#279")).toBeInTheDocument();
+    expect(screen.getByText("PREVIEW MODE")).toBeInTheDocument();
   });
 
   it("honors field visibility settings", () => {
@@ -40,5 +41,24 @@ describe("Overlay", () => {
   it("announces the player overlay for assistive technology", () => {
     render(<Overlay snapshot={snapshot()} preview />);
     expect(screen.getByRole("region", { name: /retro rewind player overlay for zpl/i })).toBeInTheDocument();
+  });
+
+  it("uses a red change animation for a VR loss", () => {
+    const player = structuredClone(defaultPlayer);
+    player.vrDelta = -137;
+    render(<Overlay snapshot={snapshot({ player })} preview />);
+    expect(screen.getByText("87,747").closest(".vr-value")).toHaveClass("change-negative");
+  });
+
+  it("wraps dense context fields without truncating their text", () => {
+    const config = structuredClone(defaultConfig);
+    config.visibility.room = true;
+    config.visibility.track = true;
+    config.visibility.sessionDelta = true;
+    config.visibility.dailyDelta = true;
+    const { container } = render(<Overlay snapshot={snapshot({ config })} preview />);
+    expect(screen.getByText("GBA Rainbow Road")).toBeInTheDocument();
+    expect(screen.getByText("Retro Tracks")).toBeInTheDocument();
+    expect(container.querySelector(".overlay-card")).toHaveClass("context-dense");
   });
 });

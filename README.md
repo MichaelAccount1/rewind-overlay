@@ -27,7 +27,7 @@ The same renderer powers the Studio preview, OBS Browser Source, and floating de
 
 ### Windows (recommended)
 
-1. Download `Rewind-Overlay-Setup-1.0.0.exe` from the latest GitHub release.
+1. Download `Rewind Overlay Setup <version>.exe` from the [latest GitHub release](https://github.com/MichaelAccount1/rewind-overlay/releases/latest).
 2. Run Rewind Overlay. The Studio and floating overlay open together.
 3. In **Player**, leave detection on **Automatic** if Wheel Wizard is installed, or choose **Friend code** for a console.
 4. Turn off **Preview mode** when you are ready for live RWFC data.
@@ -86,6 +86,8 @@ npm run package
 ```
 
 The renderer is React + TypeScript. Electron owns the transparent windows, localhost service, settings persistence and RWFC adapters. See [Architecture](docs/architecture.md).
+
+Release-by-release fixes are documented in the [changelog](CHANGELOG.md).
 
 ## Privacy and security
 

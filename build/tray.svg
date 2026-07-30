@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="prism" x1="8" y1="6" x2="57" y2="59" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#29e5ff"/>
+      <stop offset=".48" stop-color="#7168ff"/>
+      <stop offset="1" stop-color="#ff7347"/>
+    </linearGradient>
+  </defs>
+  <rect x="3" y="3" width="58" height="58" rx="16" fill="#0c1120" stroke="url(#prism)" stroke-width="6"/>
+  <path d="M18 47V17h15c8 0 13 4 13 11 0 5-2 8-7 10l9 9H37l-7-8h-4v8h-8Zm8-15h7c4 0 6-1 6-4s-2-4-6-4h-7v8Z" fill="#fff"/>
+</svg>

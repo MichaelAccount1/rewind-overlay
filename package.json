@@ -1,7 +1,7 @@
 {
   "name": "rewind-overlay",
   "desktopName": "rewind-overlay.desktop",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Broadcast-quality VR, rank and race-change overlay for Retro Rewind",
   "author": {
     "name": "Rewind Overlay contributors",
@@ -75,6 +75,14 @@
       {
         "from": "obs",
         "to": "obs"
+      },
+      {
+        "from": "build/icon.png",
+        "to": "icon.png"
+      },
+      {
+        "from": "build/tray.png",
+        "to": "tray.png"
       }
     ],
     "win": {
