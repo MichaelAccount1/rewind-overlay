@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="surface" x1="55" y1="31" x2="449" y2="478" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#151d35"/>
+      <stop offset="1" stop-color="#070912"/>
+    </linearGradient>
+    <linearGradient id="prism" x1="54" y1="55" x2="456" y2="458" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#29e5ff"/>
+      <stop offset=".32" stop-color="#696cff"/>
+      <stop offset=".64" stop-color="#d84cff"/>
+      <stop offset="1" stop-color="#ff8733"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="15" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect x="25" y="25" width="462" height="462" rx="126" fill="url(#prism)" opacity=".42" filter="url(#glow)"/>
+  <rect x="37" y="37" width="438" height="438" rx="115" fill="url(#surface)" stroke="url(#prism)" stroke-width="16"/>
+  <path d="M139 344V168h90c47 0 76 24 76 65 0 28-14 49-39 59l50 52h-58l-42-46h-30v46h-47Zm47-88h40c21 0 32-8 32-24 0-15-11-23-32-23h-40v47Z" fill="#fff"/>
+  <path d="M302 344V168h71c55 0 91 35 91 88s-36 88-91 88h-71Zm47-42h22c29 0 46-17 46-46 0-30-17-46-46-46h-22v92Z" fill="#fff" opacity=".92"/>
+  <circle cx="407" cy="116" r="18" fill="#31e6ff"/>
+</svg>

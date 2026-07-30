@@ -1,0 +1,26 @@
+node_modules/
+dist/
+dist-electron/
+release/
+coverage/
+*.log
+.DS_Store
+.vite/
+.capture-data/
+/build/icon.png
+
+# User-supplied/runtime files that are not part of the application
+/6.12.2 Full/
+/Dolphin-x64/
+/MarioKart.iso
+/OBS Studio.lnk
+/WheelWizardWindows.exe
+/example1.png
+/prompt
+
+# Local environment and signing material
+.env
+.env.*
+!.env.example
+*.pfx
+*.cer
