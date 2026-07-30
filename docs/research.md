@@ -44,11 +44,23 @@ local WhWz logs `%APPDATA%\CT-MKWII\logs\*.txt`).
 
 | # | Endpoint | Returns |
 |---|----------|---------|
-| 1 | `GET /api/roomstatus` | all live rooms + players (live VR, room, race counter, track) |
+| 1 | `GET /api/roomstatus` | all live rooms + players (live VR, room, race counter, **trackName**) — server-side snapshot refreshed every 10 s |
 | 2 | `GET /api/leaderboard/top/{n}` | top-n leaderboard (server caps at **100** ✅) |
 | 3 | `GET /api/leaderboard/player/{fc}` | one player: VR, **rank**, vrStats, Mii PNG |
-| 4 | `GET /api/leaderboard/player/{fc}/history?days=N` | per-race VR change log |
-| 5 | `GET /api/leaderboard/top/{n}?around={fc}` | leaderboard window centered on a player ✅ (WhWz doesn't use it; useful for "players near you") |
+| 4 | `GET /api/leaderboard/player/{fc}/history?days=N` | per-race VR change log (also `?from=&to=`) |
+| 5 | `GET /api/leaderboard/player/{fc}/history/recent?count=N` | last N per-race VR changes — **best "last race Δ" source** ✅ |
+| 6 | `GET /api/leaderboard/player/{fc}/mii/image` | cached 64×64 PNG of the Mii (`max-age=3600`) ✅ |
+| 7 | `GET /api/leaderboard?page=&pageSize=&search=&sortBy=&timePeriod=` | paged/searchable leaderboard (pageSize ≤ 50, sortBy incl. `vrgain24/7/30`; `totalCount` ≈ 71.5k players) |
+| 8 | `GET /api/leaderboard/top/{n}?around={fc}` | leaderboard window centered on a player ✅ |
+| 9 | `GET /api/wfc/groups?game=mariokartwii[&id=…]` | raw upstream Wiimmfi-style groups (string `ev`/`eb`; players keyed by slot) |
+| 10 | `GET /api/wfc/mkw_rr?id={roomId}` | **per-race finish results** keyed by race num: `FinishPos`, `CharacterID`, `VehicleID`, `FinishTime` (⚠ float32 bit-pattern as int — reinterpret bits), `PlayerCount` |
+| 11 | `GET /api/wfc/stats` / `GET /api/roomstatus/stats` | live online counts (`{global:{online,active,groups}}` / `{totalPlayers,totalRooms,peakPlayersAllTime}`) |
+| 12 | `GET /api/racestats/player/{pid}` | lifetime online race stats: totalRaces, top tracks/characters/vehicles/combos, recentRaces with finishPos |
+
+Room-kind codes (`rk`): `vs_10` Retro Tracks, `vs_11` Online TT, `vs_12` 200cc, `vs_13` Item
+Rain, `vs_14` Regular Battle, `vs_15` Elimination Battle, `vs_20` Custom Tracks, `vs_21`
+Vanilla Tracks, `vs_22` CT 200cc. `race.cc`: 2 = 150cc, 1 = 200cc. Time-trial APIs also exist
+(`/api/timetrial/*`: tracks, leaderboards, WRs, ghosts) — optional future extras.
 
 Auxiliary (WheelWizard-Data, GitHub raw): `https://raw.githubusercontent.com/TeamWheelWizard/WheelWizard-Data/main/badges.json`
 (badge lists keyed by friend code) and `/status.json`.
@@ -291,6 +303,14 @@ on screen (never blank the overlay mid-stream).
 
 **Server load:** worst case ~6 req/min tiny JSON + 1×54 KB/10 s — comparable to one open
 rr-rooms browser tab; well within polite range. Identify with a custom UA + repo URL.
+Confirmed limits (rwfc-web `Program.cs`): **2000 req/min/IP global**; special: room refresh
+POST 5/min, mii download 3/min, ghost download 10/min. rwfc.net's own site polls groups every
+10 s and syncs the leaderboard every **60 s** — so `rank`/`vrStats`/history only move once a
+minute; polling `player/{fc}` faster than 60 s is wasted. Note the leaderboard tracker only
+records players seen in *public* race rooms (allowed `rk` list) — private-room racing may not
+move rank/history. All endpoints are CORS-open (`Access-Control-Allow-Origin: *`), so a pure
+browser overlay could fetch directly; we still centralize polling in the app so N overlay
+clients (OBS + floating window + preview) share one upstream poll.
 
 ## 8. What the API can't give us (and whether we care)
 
@@ -299,14 +319,47 @@ Live-position overlays require Dolphin memory reading (e.g. dolphin-memory-engin
 **Recommendation: v1 ships API-only** (covers 100% of the requested features: VR, ΔVR, rank,
 tag, room/track extras). Memory reading = v2 option, pending prior-art research (§9).
 
-## 9. Pending research (agents in flight — will be appended)
+## 9. Ecosystem notes (research thread 2 — resolved)
 
-1. General RWFC/WiiLink ecosystem notes, rate-limit etiquette, error shapes (404 body for
-   unknown FC), Mii studio conversion reference.
-2. Prior art survey (existing overlay projects incl. the one in the reference VOD) +
-   Dolphin memory-reading feasibility notes.
+- RWFC is a fork of **WiiLink WFC** run by the Retro-Rewind-Team GitHub org. Server source:
+  `Retro-Rewind-Team/wfc-server` (Go); site/leaderboard: `Retro-Rewind-Team/rwfc-web`
+  (ASP.NET + SolidJS). `zplwii.xyz` is dead (NXDOMAIN); the old `/api/groups` path is gone —
+  upstream NAS API now lives under `/api/wfc/*`.
+- Leaderboard internals: rwfc-web's background service polls groups every 1 min, writes a
+  `VRHistory` row per VR change — that's the `history` data we consume; resolution is 1 min.
+- Mii pipeline used by rwfc.net itself: 74-byte Wii Mii → RC24 converter
+  (`POST https://miicontestp.wii.rc24.xyz/cgi-bin/studio.cgi`, multipart `data` + `platform=wii`)
+  → `https://studio.mii.nintendo.com/miis/image.png?data=<hex>&type=face&width=270`.
+  **We should not do this ourselves** — `/api/leaderboard/player/{fc}/mii/image` returns the
+  finished cached PNG.
+- `FinishTime` in `mkw_rr` is an IEEE-754 float32 bit-pattern stored as int (seconds);
+  reinterpret the bits, don't divide.
 
-## 10. Raw evidence index (local, outside repo)
+## 10. Prior art & Dolphin memory reading (research thread 3 — resolved)
+
+**Prior art:** no public repo exists for the overlay in the reference VOD (ZPL's GitHub is
+`zachpl-mk`; nothing overlay-shaped). Everything it displays is served by
+`/api/leaderboard/player/{fc}` + roomstatus, so our data plan reproduces it exactly.
+Closest projects: `KevinVG207/rr-rooms` and `ppebb/RetroRewindRooms` (static JS pages polling
+the groups API — the browser-source pattern), WheelWizard itself (reference implementation
+for all file parsing), `gabrlel.github.io/vrloss.html` (independent confirmation of the
+RRRating.pul format). No existing OBS overlay for RR — we're first.
+
+**Extra save-format facts:** save region u16 @0x26B0A (÷0x1000); cached license Mii (74 B)
+@rkpd+0x5684; RR's rating cap is **1,000,000** (remade system since RR 6.5) — display code
+must budget 7 digits.
+
+**Plain-Dolphin (no WheelWizard) save path:** `<user>\Load\Riivolution\riivolution\save\RetroWFC\<RMCx>\rksys.dat`
+(no `WheelWizard` segment) — the identity resolver scans both trees.
+
+**Dolphin memory reading: rejected for v1.** Vanilla RAM addresses for VR
+(`RKNetController::sInstance` @0x809C20D8 PAL, vr/br ≈ +0x2764/+0x2768) exist, but Retro
+Rewind's Pulsar engine replaces the rating system, so vanilla addresses hold stale/clamped
+values under RR and would need re-REing per RR release. No maintained Node binding either
+(python `dolphin-memory-engine` / C# `Dolphin.Memory.Access` are the mature options). The
+API + files strategy covers every requested feature without it.
+
+## 11. Raw evidence index (local, outside repo)
 
 `%LOCALAPPDATA%\Temp\rr-probe\`: `roomstatus.json`, `leaderboard.json`, `player.json`,
 `hist.json`, `hist2.json`, `me.json`, probe scripts `probe.js`, `identity.js` (working

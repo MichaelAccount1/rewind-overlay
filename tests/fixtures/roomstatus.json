@@ -1,0 +1,71 @@
+{
+  "rooms": [
+    {
+      "id": "KUEJYC",
+      "type": "anybody",
+      "created": "2026-07-29T18:02:55.2396027Z",
+      "host": "115",
+      "rk": "vs_10",
+      "players": [
+        {
+          "pid": "110204",
+          "name": "omoney¿",
+          "friendCode": "3951-3710-1436",
+          "vr": 77770,
+          "br": 5000,
+          "isOpenHost": true,
+          "isSuspended": false,
+          "mii": { "data": "gBYAbwBtAG8AbgBlAHkAvwAA", "name": "omoney¿" },
+          "connectionMap": ["2", "2"],
+          "slotId": "115"
+        },
+        {
+          "pid": "118883",
+          "name": "Cooper",
+          "friendCode": "0085-9005-3475",
+          "vr": 51309,
+          "br": 5000,
+          "isOpenHost": true,
+          "isSuspended": false,
+          "mii": { "data": "gAoAQwBvAG8AcABlAHIAAAAA", "name": "Cooper" },
+          "connectionMap": ["2", "2"],
+          "slotId": "118"
+        }
+      ],
+      "averageVR": 60976,
+      "race": { "num": 127, "course": 335, "cc": 2, "trackName": "SW Shroom Ridge / DS Shroom Ridge" },
+      "roomType": "Retro Tracks",
+      "isPublic": true,
+      "isJoinable": true,
+      "isSuspended": false
+    },
+    {
+      "id": "VERTAD",
+      "type": "anybody",
+      "created": "2026-07-29T19:39:16.4525124Z",
+      "host": "126",
+      "rk": "vs_20",
+      "players": [
+        {
+          "pid": "600001218",
+          "name": "Zboy",
+          "friendCode": "3270-1751-5714",
+          "vr": 56134,
+          "br": 5000,
+          "isOpenHost": false,
+          "isSuspended": true,
+          "mii": { "data": "gArwYQBaAGIAbwB58GkAAAAA", "name": "Zboy" },
+          "connectionMap": ["2", "2"],
+          "slotId": "126"
+        }
+      ],
+      "averageVR": 56134,
+      "race": { "num": 12, "course": 101, "cc": 1, "trackName": "Aquadrom Stage" },
+      "roomType": "Custom Tracks",
+      "isPublic": true,
+      "isJoinable": true,
+      "isSuspended": false
+    }
+  ],
+  "timestamp": "2026-07-30T01:43:36.936769Z"
+}
