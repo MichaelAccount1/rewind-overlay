@@ -1,5 +1,6 @@
 {
   "name": "rewind-overlay",
+  "desktopName": "rewind-overlay.desktop",
   "version": "1.0.0",
   "description": "Broadcast-quality VR, rank and race-change overlay for Retro Rewind",
   "author": {
@@ -111,7 +112,7 @@
         "deb"
       ],
       "category": "Utility",
-      "desktopName": "rewind-overlay.desktop",
+      "syncDesktopName": true,
       "synopsis": "Retro Rewind player overlay for OBS and desktop"
     }
   }
