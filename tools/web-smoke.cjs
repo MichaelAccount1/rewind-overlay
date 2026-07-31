@@ -6,6 +6,7 @@ const root = path.resolve(__dirname, "..");
 const output = path.join(root, ".capture-data");
 const port = 4174;
 app.setPath("userData", path.join(output, "web-user-data"));
+if (process.platform === "linux") app.commandLine.appendSwitch("no-sandbox");
 
 app.whenReady().then(async () => {
   const { preview } = await import("vite");

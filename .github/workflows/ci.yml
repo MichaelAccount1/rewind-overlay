@@ -55,7 +55,7 @@ jobs:
       - if: runner.os == 'Windows'
         run: '& "release/win-unpacked/Rewind Overlay.exe" --smoke-test'
       - if: runner.os == 'Linux'
-        run: xvfb-run -a release/linux-unpacked/rewind-overlay --smoke-test
+        run: xvfb-run -a release/linux-unpacked/rewind-overlay --smoke-test --no-sandbox
       - if: runner.os == 'macOS'
         run: |
           APP_PATH="$(find release -path '*/Rewind Overlay.app/Contents/MacOS/Rewind Overlay' -type f -print -quit)"

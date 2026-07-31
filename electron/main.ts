@@ -139,17 +139,24 @@ async function waitForRenderer(window: BrowserWindow): Promise<void> {
 async function runSmokeTest(studio: BrowserWindow, overlay: BrowserWindow): Promise<void> {
   const check = async () => {
     await Promise.all([waitForRenderer(studio), waitForRenderer(overlay)]);
-    const [studioReady, overlayReady, health] = await Promise.all([
-      studio.webContents.executeJavaScript("Boolean(document.querySelector('.studio'))") as Promise<boolean>,
-      overlay.webContents.executeJavaScript("Boolean(document.querySelector('.overlay-card'))") as Promise<boolean>,
-      fetch(`http://127.0.0.1:${OVERLAY_PORT}/api/health`).then((response) => response.json()) as Promise<{ ok?: boolean }>
-    ]);
-    if (!studioReady || !overlayReady || !health.ok) throw new Error("Packaged renderer or local service did not become ready.");
+    const deadline = Date.now() + 30_000;
+    let state = { studioReady: false, overlayReady: false, healthReady: false };
+    while (Date.now() < deadline) {
+      const [studioReady, overlayReady, healthReady] = await Promise.all([
+        studio.webContents.executeJavaScript("Boolean(document.querySelector('.studio'))") as Promise<boolean>,
+        overlay.webContents.executeJavaScript("Boolean(document.querySelector('.overlay-card'))") as Promise<boolean>,
+        fetch(`http://127.0.0.1:${OVERLAY_PORT}/api/health`)
+          .then((response) => response.json())
+          .then((health: { ok?: boolean }) => Boolean(health.ok))
+          .catch(() => false)
+      ]);
+      state = { studioReady, overlayReady, healthReady };
+      if (studioReady && overlayReady && healthReady) return;
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    }
+    throw new Error(`Packaged surfaces did not become ready: ${JSON.stringify(state)}`);
   };
-  await Promise.race([
-    check(),
-    new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Smoke test timed out.")), 30_000))
-  ]);
+  await check();
   console.log("Rewind Overlay smoke test passed.");
   quitting = true;
   app.quit();
