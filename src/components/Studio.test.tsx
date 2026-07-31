@@ -49,4 +49,27 @@ describe("Studio license picker", () => {
     ));
     expect(screen.getByText(/automatic following is paused/i)).toBeInTheDocument();
   });
+
+  it("edits an element offset from the dedicated Elements tab", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ config: defaultConfig })
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<Studio snapshot={snapshot()} connectionError="" />);
+    fireEvent.click(screen.getByRole("button", { name: /elements size & placement/i }));
+    expect(screen.getByText("Badge elements")).toBeInTheDocument();
+
+    fireEvent.change(screen.getAllByRole("slider")[0], { target: { value: "32" } });
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
+      "/api/config",
+      expect.objectContaining({
+        method: "PATCH",
+        body: JSON.stringify({ elements: { vr: { x: 32, y: 0, scale: 1 } } })
+      })
+    ));
+    expect(screen.getByText("CUSTOM")).toBeInTheDocument();
+  });
 });

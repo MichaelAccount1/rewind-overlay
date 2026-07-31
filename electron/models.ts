@@ -1,5 +1,7 @@
 export type BorderEffect = "rainbow" | "snake" | "pulse" | "wave" | "ghost" | "solid" | "off";
 export type ChangeAnimation = "count" | "spring" | "flip" | "burst" | "none";
+export type OverlayElementKey = "avatar" | "name" | "context" | "vr" | "delta" | "rank" | "vrLabel";
+export interface OverlayElementTransform { x: number; y: number; scale: number }
 
 export interface OverlayConfig {
   version: 1;
@@ -24,6 +26,7 @@ export interface OverlayConfig {
     color1: string;
     color2: string;
   };
+  elements: Record<OverlayElementKey, OverlayElementTransform>;
   layout: { scale: number; width: number; compact: boolean; align: "horizontal" | "stacked" };
   typography: { family: string; numberFamily: string; weight: number; textColor: string; mutedColor: string };
   background: {
@@ -79,6 +82,15 @@ export const defaultConfig: OverlayConfig = {
     sessionDelta: false, dailyDelta: false
   },
   avatar: { background: "gradient", color1: "#31d4ff", color2: "#3556ae" },
+  elements: {
+    avatar: { x: 0, y: 0, scale: 1 },
+    name: { x: 0, y: 0, scale: 1 },
+    context: { x: 0, y: 0, scale: 1 },
+    vr: { x: 0, y: 0, scale: 1 },
+    delta: { x: 0, y: 0, scale: 1 },
+    rank: { x: 0, y: 0, scale: 1 },
+    vrLabel: { x: 0, y: 0, scale: 1 }
+  },
   layout: { scale: 1, width: 560, compact: false, align: "horizontal" },
   typography: {
     family: "Inter, ui-sans-serif, system-ui, sans-serif",

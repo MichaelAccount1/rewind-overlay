@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { API_ORIGIN } from "../api";
-import type { Snapshot } from "../types";
+import type { OverlayElementKey, Snapshot } from "../types";
 import { overlayCardHeight } from "../../electron/overlay-layout";
 
 type Vars = CSSProperties & Record<`--${string}`, string | number>;
@@ -58,6 +58,10 @@ export function Overlay({ snapshot, desktop = false, preview = false }: {
   const zoomPan = Math.max(0, background.zoom - 1) * 50;
   const border = config.border;
   const reduce = config.animations.reducedMotion;
+  const elementStyle = (key: OverlayElementKey): CSSProperties => {
+    const element = config.elements[key];
+    return { transform: `translate(${element.x}px, ${element.y}px) scale(${element.scale})` };
+  };
   const style = useMemo<Vars>(() => ({
     "--badge-width": `${config.layout.width}px`,
     "--badge-scale": preview ? 1 : config.layout.scale,
@@ -116,32 +120,42 @@ export function Overlay({ snapshot, desktop = false, preview = false }: {
           <div className="card-content">
             <div className="identity-block">
               {config.visibility.avatar && (
-                <div className={`avatar avatar-${config.avatar.background}`} aria-hidden="true">
-                  {player.avatarUrl
-                    ? <img src={player.avatarUrl} alt="" />
-                    : <span>{initials(player.name)}</span>}
+                <div className="element-positioner element-avatar" style={elementStyle("avatar")}>
+                  <div className={`avatar avatar-${config.avatar.background}`} aria-hidden="true">
+                    {player.avatarUrl
+                      ? <img src={player.avatarUrl} alt="" />
+                      : <span>{initials(player.name)}</span>}
+                  </div>
                 </div>
               )}
               <div className="identity-copy">
-                {config.visibility.name && <div className="player-name">{name}</div>}
-                {config.visibility.connection && (
-                  <div className={`connection connection-${status.phase}`}>
-                    <i />{player.online ? player.room || "Online" : "Waiting for room"}
+                {config.visibility.name && (
+                  <div className="element-positioner element-name" style={elementStyle("name")}>
+                    <div className="player-name">{name}</div>
                   </div>
                 )}
-                {(config.visibility.room || config.visibility.track || config.visibility.sessionDelta || config.visibility.dailyDelta) && (
-                  <div className="context-line">
-                    {config.visibility.room && player.room && <span>{player.room}</span>}
-                    {config.visibility.track && extras?.trackName && <span className="context-track">{extras.trackName}</span>}
-                    {config.visibility.sessionDelta && extras?.sessionDelta !== null && extras?.sessionDelta !== undefined && (
-                      <span className={extras.sessionDelta >= 0 ? "positive" : "negative"}>
-                        SESSION {extras.sessionDelta >= 0 ? "+" : ""}{extras.sessionDelta.toLocaleString()}
-                      </span>
+                {(config.visibility.connection || config.visibility.room || config.visibility.track || config.visibility.sessionDelta || config.visibility.dailyDelta) && (
+                  <div className="element-positioner element-context" style={elementStyle("context")}>
+                    {config.visibility.connection && (
+                      <div className={`connection connection-${status.phase}`}>
+                        <i />{player.online ? player.room || "Online" : "Waiting for room"}
+                      </div>
                     )}
-                    {config.visibility.dailyDelta && extras?.vrStats && (
-                      <span className={extras.vrStats.last24Hours >= 0 ? "positive" : "negative"}>
-                        24H {extras.vrStats.last24Hours >= 0 ? "+" : ""}{extras.vrStats.last24Hours.toLocaleString()}
-                      </span>
+                    {(config.visibility.room || config.visibility.track || config.visibility.sessionDelta || config.visibility.dailyDelta) && (
+                      <div className="context-line">
+                        {config.visibility.room && player.room && <span>{player.room}</span>}
+                        {config.visibility.track && extras?.trackName && <span className="context-track">{extras.trackName}</span>}
+                        {config.visibility.sessionDelta && extras?.sessionDelta !== null && extras?.sessionDelta !== undefined && (
+                          <span className={extras.sessionDelta >= 0 ? "positive" : "negative"}>
+                            SESSION {extras.sessionDelta >= 0 ? "+" : ""}{extras.sessionDelta.toLocaleString()}
+                          </span>
+                        )}
+                        {config.visibility.dailyDelta && extras?.vrStats && (
+                          <span className={extras.vrStats.last24Hours >= 0 ? "positive" : "negative"}>
+                            24H {extras.vrStats.last24Hours >= 0 ? "+" : ""}{extras.vrStats.last24Hours.toLocaleString()}
+                          </span>
+                        )}
+                      </div>
                     )}
                   </div>
                 )}
@@ -151,33 +165,39 @@ export function Overlay({ snapshot, desktop = false, preview = false }: {
             <div className="rating-block">
               {config.visibility.vr && (
                 <div className="vr-line">
-                  <div className={`vr-value ${(player.vrDelta ?? 0) < 0 ? "change-negative" : "change-positive"}`}>
-                    <AnimatedNumber
-                      value={player.vr}
-                      animation={config.animations.vr}
-                      duration={config.animations.durationMs}
-                    />
+                  <div className="element-positioner element-vr" style={elementStyle("vr")}>
+                    <div className={`vr-value ${(player.vrDelta ?? 0) < 0 ? "change-negative" : "change-positive"}`}>
+                      <AnimatedNumber
+                        value={player.vr}
+                        animation={config.animations.vr}
+                        duration={config.animations.durationMs}
+                      />
+                    </div>
                   </div>
                   {config.visibility.delta && player.vrDelta !== null && (
-                    <div key={`${player.vr}-${player.vrDelta}`} className={`delta ${deltaPositive ? "positive" : "negative"}`}>
-                      <span className="delta-arrow">{deltaPositive ? "▲" : "▼"}</span>
-                      {deltaPositive ? "+" : ""}{player.vrDelta.toLocaleString()}
+                    <div className="element-positioner element-delta" style={elementStyle("delta")}>
+                      <div key={`${player.vr}-${player.vrDelta}`} className={`delta ${deltaPositive ? "positive" : "negative"}`}>
+                        <span className="delta-arrow">{deltaPositive ? "▲" : "▼"}</span>
+                        {deltaPositive ? "+" : ""}{player.vrDelta.toLocaleString()}
+                      </div>
                     </div>
                   )}
                 </div>
               )}
               <div className="meta-line">
                 {config.visibility.rank && (
-                  <div key={player.rank ?? "unranked"} className={`rank-chip anim-${config.animations.rank}`}>
-                    <span>{formatRank(player.rank)}</span>
-                    {config.visibility.rankDelta && player.rankDelta !== null && player.rankDelta !== 0 && (
-                      <b className={rankPositive ? "positive" : "negative"}>
-                        {rankPositive ? "▲" : "▼"} {Math.abs(player.rankDelta)}
-                      </b>
-                    )}
+                  <div className="element-positioner element-rank" style={elementStyle("rank")}>
+                    <div key={player.rank ?? "unranked"} className={`rank-chip anim-${config.animations.rank}`}>
+                      <span>{formatRank(player.rank)}</span>
+                      {config.visibility.rankDelta && player.rankDelta !== null && player.rankDelta !== 0 && (
+                        <b className={rankPositive ? "positive" : "negative"}>
+                          {rankPositive ? "▲" : "▼"} {Math.abs(player.rankDelta)}
+                        </b>
+                      )}
+                    </div>
                   </div>
                 )}
-                <span className="vr-label">VR</span>
+                <span className="element-positioner element-vr-label" style={elementStyle("vrLabel")}><span className="vr-label">VR</span></span>
               </div>
             </div>
           </div>

@@ -1,5 +1,7 @@
 export type BorderEffect = "rainbow" | "snake" | "pulse" | "wave" | "ghost" | "solid" | "off";
 export type ChangeAnimation = "count" | "spring" | "flip" | "burst" | "none";
+export type OverlayElementKey = "avatar" | "name" | "context" | "vr" | "delta" | "rank" | "vrLabel";
+export interface OverlayElementTransform { x: number; y: number; scale: number }
 
 export interface OverlayConfig {
   version: 1;
@@ -14,6 +16,7 @@ export interface OverlayConfig {
     color1: string;
     color2: string;
   };
+  elements: Record<OverlayElementKey, OverlayElementTransform>;
   layout: { scale: number; width: number; compact: boolean; align: "horizontal" | "stacked" };
   typography: { family: string; numberFamily: string; weight: number; textColor: string; mutedColor: string };
   background: {

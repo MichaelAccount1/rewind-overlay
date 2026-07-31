@@ -1,15 +1,17 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { defaultConfig } from "../../electron/models";
 import { api } from "../api";
-import type { BorderEffect, ChangeAnimation, OverlayConfig, Snapshot } from "../types";
+import type { BorderEffect, ChangeAnimation, OverlayConfig, OverlayElementKey, Snapshot } from "../types";
 import { Overlay } from "./Overlay";
 import { ColorInput, Field, Range, Section, Segmented, Toggle } from "./controls";
 import "../styles/studio.css";
 
-type Page = "live" | "identity" | "content" | "background" | "border" | "animation" | "output";
+type Page = "live" | "identity" | "content" | "elements" | "background" | "border" | "animation" | "output";
 const pages: { id: Page; icon: string; label: string; detail: string }[] = [
   { id: "live", icon: "●", label: "Live", detail: "Status & preview" },
   { id: "identity", icon: "◎", label: "Player", detail: "Detection & data" },
   { id: "content", icon: "◫", label: "Content", detail: "Layout & fields" },
+  { id: "elements", icon: "⌖", label: "Elements", detail: "Size & placement" },
   { id: "background", icon: "▧", label: "Background", detail: "Image & filters" },
   { id: "border", icon: "◇", label: "Border & light", detail: "Color & motion" },
   { id: "animation", icon: "✦", label: "Animations", detail: "Race reactions" },
@@ -90,6 +92,15 @@ export function Studio({ snapshot, connectionError }: { snapshot: Snapshot; conn
     event.target.value = "";
   };
 
+  const resetElements = async () => {
+    const elements = structuredClone(defaultConfig.elements);
+    setDraft((current) => ({ ...current, elements }));
+    setSaving(true);
+    try { await api.config({ elements }); flash("Element layout reset"); }
+    catch (error) { setNotice(error instanceof Error ? error.message : "Could not reset element layout"); }
+    finally { setSaving(false); }
+  };
+
   return (
     <div className="studio">
       <aside className="sidebar">
@@ -129,6 +140,7 @@ export function Studio({ snapshot, connectionError }: { snapshot: Snapshot; conn
             {page === "live" && <LivePanel snapshot={snapshot} connectionError={connectionError} />}
             {page === "identity" && <IdentityPanel config={draft} status={snapshot.status} patch={patch} />}
             {page === "content" && <ContentPanel config={draft} patch={patch} />}
+            {page === "elements" && <ElementLayoutPanel config={draft} patch={patch} resetAll={resetElements} />}
             {page === "background" && <BackgroundPanel config={draft} patch={patch} upload={uploadBackground} />}
             {page === "border" && <BorderPanel config={draft} patch={patch} />}
             {page === "animation" && <AnimationPanel config={draft} patch={patch} />}
@@ -346,6 +358,66 @@ function ContentPanel({ config, patch }: { config: OverlayConfig; patch: Patch }
         <Field label="Secondary color"><ColorInput value={config.typography.mutedColor} onChange={(value) => patch("typography", "mutedColor", value)} /></Field>
         <Field label="Font weight"><Range value={config.typography.weight} min={500} max={900} step={100} onChange={(value) => patch("typography", "weight", value)} /></Field>
       </Section>
+    </>
+  );
+}
+
+const elementLabels: Record<OverlayElementKey, [string, string]> = {
+  avatar: ["Mii icon", "Avatar artwork and backing"],
+  name: ["Player name", "Name and optional team tag"],
+  context: ["Status & context", "Connection, room, track and session rows"],
+  vr: ["VR value", "Current versus rating"],
+  delta: ["Race change", "Last-race VR gain or loss"],
+  rank: ["Global rank", "Rank and rank movement"],
+  vrLabel: ["VR label", "Small rating label"]
+};
+
+function ElementLayoutPanel({ config, patch, resetAll }: {
+  config: OverlayConfig; patch: Patch; resetAll: () => Promise<void>;
+}) {
+  const [selected, setSelected] = useState<OverlayElementKey>("vr");
+  const element = config.elements[selected];
+  const update = (values: Partial<typeof element>) =>
+    patch("elements", selected, { ...element, ...values });
+
+  return (
+    <>
+      <Section title="Badge elements" description="Choose an item, then position and size it independently. Changes appear in the live preview.">
+        <div className="element-grid">
+          {(Object.keys(elementLabels) as OverlayElementKey[]).map((key) => {
+            const value = config.elements[key];
+            const customized = value.x !== 0 || value.y !== 0 || value.scale !== 1;
+            return (
+              <button
+                type="button"
+                key={key}
+                className={selected === key ? "is-active" : ""}
+                onClick={() => setSelected(key)}
+              >
+                <span className={`element-glyph glyph-${key}`}>{key === "avatar" ? "M" : key === "vr" ? "99" : "Aa"}</span>
+                <span><b>{elementLabels[key][0]}</b><small>{elementLabels[key][1]}</small></span>
+                {customized && <i>CUSTOM</i>}
+              </button>
+            );
+          })}
+        </div>
+      </Section>
+      <Section title={elementLabels[selected][0]} description="Offsets are relative to the element's polished default position.">
+        <Field label="Horizontal position" hint="Move left or right">
+          <Range value={element.x} min={-200} max={200} step={1} unit="px" onChange={(value) => update({ x: value })} />
+        </Field>
+        <Field label="Vertical position" hint="Move up or down">
+          <Range value={element.y} min={-120} max={120} step={1} unit="px" onChange={(value) => update({ y: value })} />
+        </Field>
+        <Field label="Element size" hint="Scale without changing the rest of the badge">
+          <Range value={element.scale} min={0.5} max={2} step={0.05} unit="×" onChange={(value) => update({ scale: value })} />
+        </Field>
+        <div className="action-row">
+          <button className="button button-ghost" onClick={() => void update({ x: 0, y: 0, scale: 1 })}>Reset {elementLabels[selected][0].toLowerCase()}</button>
+          <button className="button button-danger-outline" onClick={() => void resetAll()}>Reset all elements</button>
+        </div>
+      </Section>
+      <div className="element-tip"><b>Placement tip</b><span>Use the preview as your safe area. Moving an item beyond the rounded badge will intentionally clip it.</span></div>
     </>
   );
 }

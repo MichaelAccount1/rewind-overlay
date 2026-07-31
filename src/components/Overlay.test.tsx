@@ -58,6 +58,20 @@ describe("Overlay", () => {
     expect(container.querySelector(".avatar")).toHaveClass("avatar-transparent");
   });
 
+  it("positions and scales elements independently without touching their animation nodes", () => {
+    const config = structuredClone(defaultConfig);
+    config.elements.vr = { x: -24, y: 11, scale: 1.35 };
+    config.elements.rank = { x: 18, y: -7, scale: 0.8 };
+    const { container } = render(<Overlay snapshot={snapshot({ config })} preview />);
+
+    expect(container.querySelector<HTMLElement>(".element-vr")?.style.transform)
+      .toBe("translate(-24px, 11px) scale(1.35)");
+    expect(container.querySelector<HTMLElement>(".element-rank")?.style.transform)
+      .toBe("translate(18px, -7px) scale(0.8)");
+    expect(screen.getByText("87,747")).toHaveClass("animated-value");
+    expect(screen.getByText("#279").closest(".rank-chip")).toHaveClass("anim-flip");
+  });
+
   it("announces the player overlay for assistive technology", () => {
     render(<Overlay snapshot={snapshot()} preview />);
     expect(screen.getByRole("region", { name: /retro rewind player overlay for zpl/i })).toBeInTheDocument();

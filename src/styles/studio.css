@@ -181,6 +181,18 @@
 .effect-grid button.is-active { border-color: #716df17d; background: #716df112; box-shadow: 0 0 0 2px #716df10c; }
 .effect-grid button span { display: flex; flex-direction: column; gap: 3px; }.effect-grid b { font-size: 9px; }.effect-grid small { color: #626b7f; font-size: 7px; }
 .effect-swatch { width: 30px; height: 20px; flex: 0 0 auto; border-radius: 6px; background: #4a5060; }
+.element-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; padding: 12px; }
+.element-grid button { position: relative; min-width: 0; display: flex; align-items: center; gap: 9px; padding: 10px; border: 1px solid #292f3d; border-radius: 8px; text-align: left; color: #a4acbd; background: #0d1017; }
+.element-grid button:hover { border-color: #3b4354; background: #121620; }
+.element-grid button.is-active { border-color: #716df17d; color: #f1f0ff; background: #716df112; box-shadow: inset 2px 0 #7772ff; }
+.element-grid button > span:nth-child(2) { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.element-grid b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9px; }
+.element-grid small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #626b7f; font-size: 7px; }
+.element-grid i { position: absolute; top: 5px; right: 5px; padding: 2px 4px; border-radius: 5px; color: #aaa7ff; background: #716df123; font-size: 5px; font-style: normal; font-weight: 850; letter-spacing: .05em; }
+.element-glyph { width: 30px; height: 26px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 7px; color: #b8b5ff; background: #716df11c; font-size: 9px; font-weight: 850; }
+.glyph-avatar { border-radius: 50%; }.glyph-vr, .glyph-delta, .glyph-rank { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+.element-tip { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border: 1px solid #292e3a; border-radius: 9px; color: #777f92; background: #10141c; font-size: 8px; line-height: 1.45; }
+.element-tip b { flex: 0 0 auto; color: #aaa7ff; font-size: 8px; }
 .swatch-rainbow { background: linear-gradient(90deg, #24d9ff, #8b5cf6, #ff713d); }.swatch-snake { background: linear-gradient(90deg, transparent, #22d3ee, #8b5cf6); }
 .swatch-pulse { background: #22d3ee; box-shadow: 0 0 9px #22d3ee; }.swatch-wave { background: linear-gradient(90deg, #22d3ee, #8b5cf6, #f97316, #8b5cf6); }
 .swatch-ghost { background: linear-gradient(110deg, transparent, #22d3ee, transparent, #8b5cf6, transparent); }.swatch-solid { background: #22d3ee; }.swatch-off { border: 1px dashed #414857; background: transparent; }

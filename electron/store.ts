@@ -85,6 +85,12 @@ export class ConfigStore {
     }
     if (!/^#[0-9a-f]{6}$/i.test(config.avatar.color1)) config.avatar.color1 = defaultConfig.avatar.color1;
     if (!/^#[0-9a-f]{6}$/i.test(config.avatar.color2)) config.avatar.color2 = defaultConfig.avatar.color2;
+    for (const key of Object.keys(defaultConfig.elements) as (keyof OverlayConfig["elements"])[]) {
+      const element = config.elements[key];
+      element.x = Math.max(-200, Math.min(200, Number(element.x) || 0));
+      element.y = Math.max(-120, Math.min(120, Number(element.y) || 0));
+      element.scale = Math.max(0.5, Math.min(2, Number(element.scale) || 1));
+    }
   }
 
   private save(): void {

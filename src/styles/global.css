@@ -120,6 +120,9 @@ button { cursor: pointer; }
 }
 .is-compact .card-content { padding: 14px 22px; }
 .identity-block { min-width: 0; flex: 1 1 auto; display: flex; align-items: center; gap: 14px; }
+.element-positioner { min-width: 0; transform-origin: center; }
+.element-avatar, .element-vr, .element-delta, .element-rank, .element-vr-label { flex: 0 0 auto; }
+.element-name, .element-context { transform-origin: left center; }
 .avatar {
   width: 58px; height: 58px; flex: 0 0 auto; border-radius: 50%; display: grid; place-items: center;
   background: linear-gradient(140deg, var(--avatar-color-1), var(--avatar-color-2));
