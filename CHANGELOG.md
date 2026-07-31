@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.1.2
 
 - Add a local-image browser to the Web Overlay Studio with private client-side resizing, compression, and embedding.
 - Carry background image bytes inside exported JSON profiles and materialize them on desktop import for true web/desktop portability.
