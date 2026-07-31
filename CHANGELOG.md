@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.1.0
 
 - Add a zero-install hosted Web Overlay Studio and transparent HTTPS source for OBS and TikTok LIVE Studio.
 - Share the race-aware polling engine between desktop and browser builds.
