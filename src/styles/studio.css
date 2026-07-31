@@ -153,6 +153,25 @@
 .identity-trail summary span { margin-left: auto; color: #616a7c; font-weight: 500; }
 .identity-trail ol { margin: 0; padding: 0 12px 11px 28px; border-top: 1px solid #1e2330; }
 .identity-trail li { padding: 7px 0 0 3px; color: #737d90; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 7px; line-height: 1.5; overflow-wrap: anywhere; }
+.license-picker { margin: -4px 12px 12px; overflow: hidden; border: 1px solid #292f3e; border-radius: 9px; background: #0b0e14; }
+.license-picker-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 12px; border-bottom: 1px solid #202633; }
+.license-picker-heading > span:first-child { display: flex; flex-direction: column; gap: 3px; }
+.license-picker-heading b { color: #dce0ea; font-size: 9px; }.license-picker-heading small { color: #687186; font-size: 7px; }
+.license-count { flex: 0 0 auto; padding: 4px 6px; border-radius: 8px; color: #7de8b4; background: #37af7518; font-size: 6px; font-weight: 850; letter-spacing: .08em; }
+.license-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 8px; border-bottom: 1px solid #202633; }
+.license-modes button { display: flex; flex-direction: column; gap: 3px; padding: 9px; border: 1px solid #272e3c; border-radius: 7px; text-align: left; color: #9ba4b6; background: #11151d; }
+.license-modes button.is-active { border-color: #7772ff8a; color: #ececff; background: #716df115; box-shadow: inset 2px 0 #7772ff; }
+.license-modes b { font-size: 8px; }.license-modes small { color: #626b7d; font-size: 6px; line-height: 1.35; }
+.license-list { display: flex; flex-direction: column; padding: 6px; }
+.license-list > button { min-width: 0; display: flex; align-items: center; gap: 10px; padding: 8px; border: 1px solid transparent; border-radius: 7px; text-align: left; color: #b7becd; background: transparent; }
+.license-list > button:hover { background: #ffffff06; }.license-list > button.is-pinned { border-color: #716df145; background: #716df10e; }
+.license-slot { width: 36px; flex: 0 0 auto; color: #687187; font-size: 6px; font-weight: 800; letter-spacing: .08em; }
+.license-copy { min-width: 0; display: flex; flex: 1; flex-direction: column; gap: 3px; }
+.license-copy b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #dce0e9; font-size: 9px; }
+.license-copy small { color: #687286; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 7px; }
+.license-state { flex: 0 0 auto; padding: 3px 5px; border-radius: 7px; color: #59e8a5; background: #39ba7a17; font-size: 6px; font-weight: 850; letter-spacing: .06em; }
+.license-state.pinned { color: #b1aeff; background: #716df122; }
+.license-note { margin: 0; padding: 8px 12px 10px; border-top: 1px solid #202633; color: #777f91; font-size: 7px; line-height: 1.45; }
 .upload-zone { margin: 12px; display: flex; align-items: center; gap: 11px; padding: 14px; border: 1px dashed #383e50; border-radius: 9px; cursor: pointer; background: #0d1017; }
 .upload-zone:hover { border-color: #716df1; background: #706df10a; }.upload-zone input { display: none; }
 .upload-icon { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 8px; color: #aaa7ff; background: #706df124; font-size: 18px; }

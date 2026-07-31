@@ -75,6 +75,11 @@ export class ConfigStore {
     config.layout.width = Math.max(340, Math.min(1000, Number(config.layout.width) || 560));
     config.desktop.opacity = Math.max(0.2, Math.min(1, Number(config.desktop.opacity) || 1));
     config.identity.friendCode = config.identity.friendCode.replace(/\D/g, "").slice(0, 12);
+    const licenseSlot = Number(config.identity.licenseSlot);
+    config.identity.licenseSlot = Number.isInteger(licenseSlot)
+      ? Math.max(-1, Math.min(3, licenseSlot))
+      : defaultConfig.identity.licenseSlot;
+    config.identity.followOnlineLicense = Boolean(config.identity.followOnlineLicense);
     if (!["gradient", "solid", "transparent"].includes(config.avatar.background)) {
       config.avatar.background = defaultConfig.avatar.background;
     }

@@ -52,6 +52,7 @@ export interface RuntimeStatus {
   message: string; lastSuccessAt: string | null; lastPollAt: string | null;
   consecutiveErrors: number; detectedFriendCode: string;
   identitySteps?: string[];
+  licenses?: { slot: number; name: string; friendCode: string; active: boolean }[];
 }
 
 export interface Snapshot {

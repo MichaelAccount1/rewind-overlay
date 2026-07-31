@@ -193,6 +193,12 @@ function LivePanel({ snapshot, connectionError }: { snapshot: Snapshot; connecti
 }
 
 function IdentityPanel({ config, status, patch }: { config: OverlayConfig; status: Snapshot["status"]; patch: Patch }) {
+  const licenses = status.licenses ?? [];
+  const selectAutomatic = async (followOnline: boolean) => {
+    await patch("identity", "licenseSlot", -1);
+    await patch("identity", "followOnlineLicense", followOnline);
+  };
+
   return (
     <>
       <Section title="Player detection" description="Automatic mode reads the active Wheel Wizard / RetroWFC license locally.">
@@ -220,6 +226,57 @@ function IdentityPanel({ config, status, patch }: { config: OverlayConfig; statu
               {status.identitySteps.map((step, index) => <li key={`${index}-${step}`}>{step}</li>)}
             </ol>
           </details>
+        )}
+        {config.identity.mode === "auto" && licenses.length > 0 && (
+          <div className="license-picker">
+            <div className="license-picker-heading">
+              <span><b>License switching</b><small>Follow play automatically or pin one save slot.</small></span>
+              <span className="license-count">{licenses.length} FOUND</span>
+            </div>
+            <div className="license-modes">
+              <button
+                type="button"
+                className={config.identity.licenseSlot < 0 && config.identity.followOnlineLicense ? "is-active" : ""}
+                onClick={() => void selectAutomatic(true)}
+              >
+                <b>Follow online license</b>
+                <small>Switch when another license enters a room</small>
+              </button>
+              <button
+                type="button"
+                className={config.identity.licenseSlot < 0 && !config.identity.followOnlineLicense ? "is-active" : ""}
+                onClick={() => void selectAutomatic(false)}
+              >
+                <b>Follow Wheel Wizard</b>
+                <small>Use its currently selected save slot</small>
+              </button>
+            </div>
+            <div className="license-list">
+              {licenses.map((license) => {
+                const pinned = config.identity.licenseSlot === license.slot;
+                return (
+                  <button
+                    type="button"
+                    key={`${license.slot}-${license.friendCode}`}
+                    className={pinned ? "is-pinned" : ""}
+                    onClick={() => patch("identity", "licenseSlot", license.slot)}
+                    aria-pressed={pinned}
+                  >
+                    <span className="license-slot">SLOT {license.slot + 1}</span>
+                    <span className="license-copy"><b>{license.name}</b><small>{license.friendCode}</small></span>
+                    {pinned
+                      ? <span className="license-state pinned">PINNED</span>
+                      : license.active
+                        ? <span className="license-state">ACTIVE</span>
+                        : null}
+                  </button>
+                );
+              })}
+            </div>
+            {config.identity.licenseSlot >= 0 && (
+              <p className="license-note">Automatic following is paused while a slot is pinned. Choose either Follow option above to resume it.</p>
+            )}
+          </div>
         )}
         {config.identity.mode === "friendCode" && (
           <Field label="Friend code" hint="12 digits; dashes are optional">
