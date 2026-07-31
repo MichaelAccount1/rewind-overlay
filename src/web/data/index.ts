@@ -16,6 +16,12 @@ export {
   normalizeFriendCode,
   type WebSettings
 } from "./webConfig";
+export {
+  imageFileToDataUrl,
+  LINK_SIZE_WARNING_BYTES,
+  type EmbeddedImage,
+  type EmbedImageOptions
+} from "./embedImage";
 export type { OverlayPlayer, PlayerExtras } from "../../../electron/live-engine";
 export type { OverlayConfig } from "../../../electron/models";
 export { defaultConfig } from "../../../electron/models";
