@@ -32,6 +32,15 @@ jobs:
       - run: npm run build
       - run: npm run icon
       - run: ${{ matrix.command }}
+      - if: runner.os == 'Windows'
+        run: '& "release/win-unpacked/Rewind Overlay.exe" --smoke-test'
+      - if: runner.os == 'Linux'
+        run: xvfb-run -a release/linux-unpacked/rewind-overlay --smoke-test
+      - if: runner.os == 'macOS'
+        run: |
+          APP_PATH="$(find release -path '*/Rewind Overlay.app/Contents/MacOS/Rewind Overlay' -type f -print -quit)"
+          test -n "$APP_PATH"
+          "$APP_PATH" --smoke-test
       - uses: actions/upload-artifact@v4
         with:
           name: rewind-overlay-${{ runner.os }}

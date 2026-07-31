@@ -7,6 +7,7 @@ import { LocalServer, OVERLAY_PORT } from "./server.js";
 import { overlayWindowSize } from "./overlay-layout.js";
 
 const isDevelopment = Boolean(process.env.VITE_DEV_SERVER_URL);
+const isSmokeTest = process.argv.includes("--smoke-test");
 let studioWindow: BrowserWindow | null = null;
 let overlayWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
@@ -118,6 +119,42 @@ function createTray(): void {
   tray.on("double-click", () => createStudio());
 }
 
+async function waitForRenderer(window: BrowserWindow): Promise<void> {
+  if (!window.webContents.isLoadingMainFrame()) return;
+  await new Promise<void>((resolve, reject) => {
+    const loaded = () => { cleanup(); resolve(); };
+    const failed = (_event: Electron.Event, code: number, description: string) => {
+      cleanup();
+      reject(new Error(`Renderer failed to load (${code}): ${description}`));
+    };
+    const cleanup = () => {
+      window.webContents.off("did-finish-load", loaded);
+      window.webContents.off("did-fail-load", failed);
+    };
+    window.webContents.once("did-finish-load", loaded);
+    window.webContents.once("did-fail-load", failed);
+  });
+}
+
+async function runSmokeTest(studio: BrowserWindow, overlay: BrowserWindow): Promise<void> {
+  const check = async () => {
+    await Promise.all([waitForRenderer(studio), waitForRenderer(overlay)]);
+    const [studioReady, overlayReady, health] = await Promise.all([
+      studio.webContents.executeJavaScript("Boolean(document.querySelector('.studio'))") as Promise<boolean>,
+      overlay.webContents.executeJavaScript("Boolean(document.querySelector('.overlay-card'))") as Promise<boolean>,
+      fetch(`http://127.0.0.1:${OVERLAY_PORT}/api/health`).then((response) => response.json()) as Promise<{ ok?: boolean }>
+    ]);
+    if (!studioReady || !overlayReady || !health.ok) throw new Error("Packaged renderer or local service did not become ready.");
+  };
+  await Promise.race([
+    check(),
+    new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Smoke test timed out.")), 30_000))
+  ]);
+  console.log("Rewind Overlay smoke test passed.");
+  quitting = true;
+  app.quit();
+}
+
 const ownsInstance = app.requestSingleInstanceLock();
 if (!ownsInstance) {
   app.quit();
@@ -138,10 +175,17 @@ app.whenReady().then(async () => {
   });
   await server.start();
   poller.start();
-  createStudio();
-  createOverlay();
+  const studio = createStudio();
+  const overlay = createOverlay();
+  if (isSmokeTest) {
+    await runSmokeTest(studio, overlay);
+    return;
+  }
   createTray();
   app.on("activate", () => createStudio());
+}).catch((error) => {
+  console.error(error);
+  app.exit(1);
 });
 
 app.on("before-quit", () => {
