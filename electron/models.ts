@@ -3,7 +3,16 @@ export type ChangeAnimation = "count" | "spring" | "flip" | "burst" | "none";
 
 export interface OverlayConfig {
   version: 1;
-  identity: { mode: "auto" | "friendCode" | "manual"; friendCode: string; playerName: string; tag: string };
+  identity: {
+    mode: "auto" | "friendCode" | "manual";
+    friendCode: string;
+    playerName: string;
+    tag: string;
+    /** Pin a specific save slot (0-3); -1 follows WheelWizard's selected license. */
+    licenseSlot: number;
+    /** Auto-switch to whichever of the save's licenses is currently online. */
+    followOnlineLicense: boolean;
+  };
   data: { groupsUrl: string; leaderboardUrl: string; pollSeconds: number; offlineAfterSeconds: number; demoMode: boolean };
   visibility: {
     avatar: boolean; name: boolean; tag: boolean; vr: boolean; delta: boolean;
@@ -51,7 +60,7 @@ export interface RuntimeStatus {
 
 export const defaultConfig: OverlayConfig = {
   version: 1,
-  identity: { mode: "auto", friendCode: "", playerName: "ZPL", tag: "" },
+  identity: { mode: "auto", friendCode: "", playerName: "ZPL", tag: "", licenseSlot: -1, followOnlineLicense: true },
   data: {
     groupsUrl: "https://rwfc.net/api/roomstatus",
     leaderboardUrl: "https://rwfc.net/api/leaderboard/player/{friendCode}",

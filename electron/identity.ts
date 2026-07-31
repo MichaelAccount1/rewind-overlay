@@ -48,6 +48,26 @@ export interface ResolvedIdentity {
   savePath: string;
   saveModifiedAt: string;
   licenses: License[];
+  /** Files this identity was derived from; stamp them to detect changes cheaply. */
+  sourcePaths: string[];
+}
+
+/**
+ * Change stamp over the identity's source files (mtimes). The poller compares
+ * stamps between polls to re-resolve when the user renames a license, switches
+ * slots in WheelWizard, or the game flushes its save -- without re-parsing the
+ * 2.8 MB save every tick.
+ */
+export function sourceStamp(paths: string[]): string {
+  return paths
+    .map((file) => {
+      try {
+        return `${file}:${fs.statSync(file).mtimeMs}`;
+      } catch {
+        return `${file}:absent`;
+      }
+    })
+    .join("|");
 }
 
 export interface IdentityProbe {
@@ -294,10 +314,11 @@ export function resolveIdentity(roots: IdentityRoots = {}): IdentityProbe {
   const chosen = usable.find((license) => license.slot === favoriteSlot) ?? usable[0];
   steps.push(`License slot ${chosen.slot} "${chosen.name}" -> friend code ${chosen.friendCode}`);
 
+  const pulPath = path.join(wiiDir, "shared2", "Pulsar", "RetroRewind6", "RRRating.pul");
   let vr: number | null = chosen.vr;
   let br: number | null = chosen.br;
   try {
-    const pul = fs.readFileSync(path.join(wiiDir, "shared2", "Pulsar", "RetroRewind6", "RRRating.pul"));
+    const pul = fs.readFileSync(pulPath);
     const rating = parsePulRatings(pul).find((entry) => entry.pid === chosen.pid);
     if (rating) {
       vr = rating.vr;
@@ -325,7 +346,8 @@ export function resolveIdentity(roots: IdentityRoots = {}): IdentityProbe {
       br,
       savePath,
       saveModifiedAt,
-      licenses
+      licenses,
+      sourcePaths: [path.join(whwzDir, "config.json"), savePath, pulPath]
     },
     steps
   };
