@@ -16,7 +16,7 @@
 import { EventEmitter } from "node:events";
 import type { ConfigStore } from "./store.js";
 import { defaultPlayer, type OverlayConfig, type PlayerState, type RuntimeStatus } from "./models.js";
-import { resolveIdentity, formatFriendCode, type ResolvedIdentity } from "./identity.js";
+import { resolveIdentity, formatFriendCode, sourceStamp, type License, type ResolvedIdentity } from "./identity.js";
 import {
   buildUrls,
   fetchPlayerProfile,
@@ -60,8 +60,14 @@ export type OverlayPlayer = PlayerState & { extras?: PlayerExtras };
 const playerFingerprint = (player: OverlayPlayer): string =>
   JSON.stringify({ ...player, updatedAt: "" });
 
-/** Additive: the identity-detection trail for Studio's troubleshooting panel. */
-export type OverlayStatus = RuntimeStatus & { identitySteps?: string[] };
+/**
+ * Additive status fields: the identity-detection trail for Studio's
+ * troubleshooting panel, and the save's usable licenses for the license picker.
+ */
+export type OverlayStatus = RuntimeStatus & {
+  identitySteps?: string[];
+  licenses?: { slot: number; name: string; friendCode: string; active: boolean }[];
+};
 
 interface TrackedRace {
   roomId: string;
@@ -83,6 +89,9 @@ export class PlayerPoller extends EventEmitter {
   private busy = false;
   private identity: ResolvedIdentity | null = null;
   private identityCheckedAt = 0;
+  private identityStamp = "";
+  /** The friend code the current player state belongs to; changing it resets race state. */
+  private activeFriendCode = "";
   private profile: PlayerProfile | null = null;
   private profileFetchedAt = 0;
   private history: HistoryEntry[] = [];
@@ -106,6 +115,8 @@ export class PlayerPoller extends EventEmitter {
     this.stop();
     this.identity = null;
     this.identityCheckedAt = 0;
+    this.identityStamp = "";
+    this.activeFriendCode = "";
     this.profile = null;
     this.profileFetchedAt = 0;
     this.history = [];
@@ -192,6 +203,7 @@ export class PlayerPoller extends EventEmitter {
         const probe = resolveIdentity();
         this.identity = probe.identity;
         this.status.identitySteps = probe.steps;
+        this.identityStamp = probe.identity ? sourceStamp(probe.identity.sourcePaths) : "";
       }
       this.status.detectedFriendCode = this.identity?.friendCode ?? "";
       if (this.identity && !this.demoAutoExited) {
@@ -243,14 +255,69 @@ export class PlayerPoller extends EventEmitter {
       return this.manualModeFriendCode; // learned from a name match in a room, if ever
     }
     const now = Date.now();
-    if (!this.identity && now - this.identityCheckedAt > IDENTITY_RETRY_MS) {
+    if (this.identity) {
+      // Hot-reload: the user renamed a license, switched slots in WheelWizard,
+      // or the game flushed its save. Stamping mtimes is cheap enough per tick.
+      const stamp = sourceStamp(this.identity.sourcePaths);
+      if (stamp !== this.identityStamp) {
+        this.identityStamp = stamp;
+        const probe = resolveIdentity();
+        this.status.identitySteps = probe.steps;
+        if (probe.identity) {
+          this.identity = probe.identity;
+          this.identityStamp = sourceStamp(probe.identity.sourcePaths);
+        }
+        // A probe that fails mid-session keeps the last-good identity on screen.
+      }
+    } else if (now - this.identityCheckedAt > IDENTITY_RETRY_MS) {
       this.identityCheckedAt = now;
       const probe = resolveIdentity();
       this.identity = probe.identity;
       this.status.identitySteps = probe.steps;
+      this.identityStamp = probe.identity ? sourceStamp(probe.identity.sourcePaths) : "";
     }
     this.status.detectedFriendCode = this.identity?.friendCode ?? "";
-    return this.identity?.friendCode ?? "";
+    return this.effectiveLicense(config)?.friendCode ?? this.identity?.friendCode ?? "";
+  }
+
+  /** The license the overlay should show: pinned slot if configured, else WheelWizard's pick. */
+  private effectiveLicense(config: OverlayConfig): License | null {
+    if (!this.identity) return null;
+    const usable = this.identity.licenses.filter((license) => license.pid !== 0);
+    if (config.identity.licenseSlot >= 0) {
+      const pinned = usable.find((license) => license.slot === config.identity.licenseSlot);
+      if (pinned) return pinned;
+    }
+    const identity = this.identity;
+    return usable.find((license) => license.slot === identity.slot) ?? usable[0] ?? null;
+  }
+
+  /**
+   * The player switched licenses (pin, WheelWizard change, or auto-follow):
+   * everything race-related belongs to the old license and must not leak into
+   * the new one's display (user report: inherited rank +/- after switching).
+   */
+  private resetForIdentitySwitch(friendCode: string): void {
+    this.profile = null;
+    this.profileFetchedAt = 0;
+    this.history = [];
+    this.historyFetchedAt = 0;
+    this.awaitingHistoryAfter = null;
+    this.lastRace = null;
+    this.sessionStartVr = null;
+    const license = this.identity?.licenses.find((entry) => entry.friendCode === friendCode);
+    this.player = {
+      ...this.player,
+      name: license?.name ?? this.player.name,
+      friendCode,
+      previousVr: null,
+      vrDelta: null,
+      rank: null,
+      previousRank: null,
+      rankDelta: null,
+      avatarUrl: "",
+      updatedAt: new Date().toISOString()
+    };
   }
 
   private async pollLive(config: OverlayConfig, urls: RwfcUrls, friendCode: string): Promise<void> {
@@ -262,10 +329,48 @@ export class PlayerPoller extends EventEmitter {
     }
 
     const roomStatus = await fetchRoomStatus(urls);
-    const seat = findPlayerInRooms(roomStatus, friendCode, config.identity.playerName);
+
+    // Auto-follow: whichever of the save's licenses is actually online wins
+    // (players commonly rotate between licenses mid-session).
+    if (
+      config.identity.mode === "auto" &&
+      this.identity &&
+      config.identity.followOnlineLicense &&
+      config.identity.licenseSlot < 0
+    ) {
+      const online = this.identity.licenses
+        .filter((license) => license.pid !== 0)
+        .map((license) => license.friendCode)
+        .filter((code) => findPlayerInRooms(roomStatus, code) !== null);
+      if (online.length > 0 && !online.includes(friendCode)) {
+        friendCode = online[0];
+      }
+    }
+
+    let seat = findPlayerInRooms(roomStatus, friendCode, config.identity.playerName);
     if (config.identity.mode === "manual" && seat && !this.manualModeFriendCode) {
       this.manualModeFriendCode = seat.player.friendCode;
       friendCode = seat.player.friendCode;
+      seat = findPlayerInRooms(roomStatus, friendCode);
+    }
+
+    const switched = Boolean(friendCode) && Boolean(this.activeFriendCode) && friendCode !== this.activeFriendCode;
+    if (switched) this.resetForIdentitySwitch(friendCode);
+    if (friendCode) this.activeFriendCode = friendCode;
+    if (config.identity.mode === "auto") {
+      this.status.detectedFriendCode = friendCode || this.status.detectedFriendCode;
+      this.status.licenses = this.identity
+        ? this.identity.licenses
+            .filter((license) => license.pid !== 0)
+            .map((license) => ({
+              slot: license.slot,
+              name: license.name,
+              friendCode: license.friendCode,
+              active: license.friendCode === friendCode
+            }))
+        : undefined;
+    } else {
+      this.status.licenses = undefined;
     }
 
     const raceEvent = seat ? this.detectRaceBoundary(seat.room.id, seat.room.race?.num ?? null) : false;
@@ -274,7 +379,7 @@ export class PlayerPoller extends EventEmitter {
       this.player.online && liveVr !== this.player.vr;
 
     if (friendCode) {
-      await this.refreshLeaderboardData(urls, friendCode, raceEvent || vrMoved);
+      await this.refreshLeaderboardData(urls, friendCode, raceEvent || vrMoved || switched);
     }
 
     if (!seat && !this.profile) {
@@ -400,6 +505,8 @@ export class PlayerPoller extends EventEmitter {
 
   private becomeWaiting(config: OverlayConfig, message: string): void {
     // Keep something meaningful on screen: the save-file VR beats a blank panel.
+    // Room-scoped data must never linger while we are not seated in a room
+    // (user report: track names appearing while matchmaking).
     const next: OverlayPlayer = this.identity && this.player.source !== "rwfc"
       ? {
           ...this.player,
@@ -408,10 +515,20 @@ export class PlayerPoller extends EventEmitter {
           friendCode: this.identity.friendCode,
           vr: this.identity.vr ?? this.player.vr,
           online: false,
+          room: "",
+          race: null,
+          extras: undefined,
           updatedAt: new Date().toISOString(),
           source: "manual"
         }
-      : { ...this.player, online: false, updatedAt: new Date().toISOString() };
+      : {
+          ...this.player,
+          online: false,
+          room: "",
+          race: null,
+          extras: undefined,
+          updatedAt: new Date().toISOString()
+        };
     if (playerFingerprint(next) !== playerFingerprint(this.player)) {
       this.player = next;
     }

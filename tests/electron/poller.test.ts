@@ -8,12 +8,16 @@ import type { ConfigStore } from "../../electron/store.js";
 import type { IdentityProbe } from "../../electron/identity.js";
 
 // Identity resolution reads real machine state; tests must control it.
-const { resolveIdentityMock } = vi.hoisted(() => ({ resolveIdentityMock: vi.fn() }));
+const { resolveIdentityMock, sourceStampMock } = vi.hoisted(() => ({
+  resolveIdentityMock: vi.fn(),
+  sourceStampMock: vi.fn()
+}));
 vi.mock("../../electron/identity.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../electron/identity.js")>();
-  return { ...actual, resolveIdentity: resolveIdentityMock };
+  return { ...actual, resolveIdentity: resolveIdentityMock, sourceStamp: sourceStampMock };
 });
 
+const COOPER_FC = "0085-9005-3475";
 const noInstallProbe: IdentityProbe = { identity: null, steps: ["WheelWizard folder not found (mock)"] };
 const foundProbe: IdentityProbe = {
   identity: {
@@ -25,9 +29,45 @@ const foundProbe: IdentityProbe = {
     br: 5000,
     savePath: "C:\\mock\\rksys.dat",
     saveModifiedAt: "2026-07-30T00:00:00.000Z",
-    licenses: []
+    licenses: [
+      { slot: 0, name: "omoney¿", pid: 110204, friendCode: "3951-3710-1436", vr: 5000, br: 5000 }
+    ],
+    sourcePaths: ["C:\\mock\\rksys.dat"]
   },
   steps: ["License slot 0 \"omoney¿\" -> friend code 3951-3710-1436 (mock)"]
+};
+const renamedProbe: IdentityProbe = {
+  identity: {
+    friendCode: COOPER_FC,
+    pid: 118883,
+    name: "Cooper",
+    slot: 0,
+    vr: 5100,
+    br: 5000,
+    savePath: "C:\\mock\\rksys.dat",
+    saveModifiedAt: "2026-07-30T01:00:00.000Z",
+    licenses: [{ slot: 0, name: "Cooper", pid: 118883, friendCode: COOPER_FC, vr: 5100, br: 5000 }],
+    sourcePaths: ["C:\\mock\\rksys.dat"]
+  },
+  steps: ["re-resolved after save change (mock)"]
+};
+const multiLicenseProbe: IdentityProbe = {
+  identity: {
+    friendCode: "1234-5678-0000",
+    pid: 111,
+    name: "AltLicense",
+    slot: 0,
+    vr: 5000,
+    br: 5000,
+    savePath: "C:\\mock\\rksys.dat",
+    saveModifiedAt: "2026-07-30T00:00:00.000Z",
+    licenses: [
+      { slot: 0, name: "AltLicense", pid: 111, friendCode: "1234-5678-0000", vr: 5000, br: 5000 },
+      { slot: 1, name: "Cooper", pid: 118883, friendCode: COOPER_FC, vr: 5000, br: 5000 }
+    ],
+    sourcePaths: ["C:\\mock\\rksys.dat"]
+  },
+  steps: ["multi-license save (mock)"]
 };
 
 const fixture = (name: string): unknown =>
@@ -38,7 +78,7 @@ const FC = "3951-3710-1436";
 function makeConfig(patch: Partial<OverlayConfig["identity"]> = {}): OverlayConfig {
   const config = structuredClone(defaultConfig);
   config.data.demoMode = false;
-  config.identity = { mode: "friendCode", friendCode: "395137101436", playerName: "", tag: "OMY", ...patch };
+  config.identity = { ...config.identity, mode: "friendCode", friendCode: "395137101436", playerName: "", tag: "OMY", ...patch };
   return config;
 }
 
@@ -83,6 +123,8 @@ beforeEach(() => {
   vi.setSystemTime(new Date("2026-07-30T02:00:00Z"));
   resolveIdentityMock.mockReset();
   resolveIdentityMock.mockReturnValue(noInstallProbe);
+  sourceStampMock.mockReset();
+  sourceStampMock.mockReturnValue("stamp-1");
 });
 
 afterEach(() => {
@@ -402,6 +444,106 @@ describe("live polling", () => {
     const poller = new PlayerPoller(makeStore(makeConfig()));
     await poll(poller);
     expect(poller.status.identitySteps).toEqual([`Using friend code from settings: ${FC}`]);
+  });
+
+  it("hot-reloads identity when the save changes and resets per-license state", async () => {
+    resolveIdentityMock.mockReturnValue(foundProbe);
+    stubRoutes({
+      "https://rwfc.net/api/roomstatus": fixture("roomstatus.json"),
+      [`https://rwfc.net/api/leaderboard/player/${FC}/history/recent`]: fixture("history-recent.json"),
+      [`https://rwfc.net/api/leaderboard/player/${FC}`]: fixture("player.json")
+    });
+    const config = makeConfig({ mode: "auto", friendCode: "" });
+    config.data.demoMode = false;
+    const poller = new PlayerPoller(makeStore(config));
+    await poll(poller);
+    expect(poller.player.friendCode).toBe(FC);
+    expect(poller.player.rank).toBe(408);
+    expect(poller.player.vrDelta).toBe(23);
+
+    // The user renames/switches license in WheelWizard -> save mtime changes.
+    resolveIdentityMock.mockReturnValue(renamedProbe);
+    sourceStampMock.mockReturnValue("stamp-2");
+    stubRoutes({
+      "https://rwfc.net/api/roomstatus": { rooms: [] },
+      [`https://rwfc.net/api/leaderboard/player/${COOPER_FC}/history/recent`]: [],
+      [`https://rwfc.net/api/leaderboard/player/${COOPER_FC}`]: {
+        pid: "118883", name: "Cooper", friendCode: COOPER_FC, vr: 51309, rank: 1234
+      }
+    });
+    await poll(poller);
+
+    expect(poller.player.friendCode).toBe(COOPER_FC);
+    expect(poller.player.name).toBe("Cooper");
+    expect(poller.player.rank).toBe(1234);
+    // Nothing inherited from the previous license (user report).
+    expect(poller.player.vrDelta).toBeNull();
+    expect(poller.player.previousVr).toBeNull();
+    expect(poller.player.previousRank).toBeNull();
+    expect(poller.player.rankDelta).toBeNull();
+  });
+
+  it("auto-follows the license that is actually online", async () => {
+    resolveIdentityMock.mockReturnValue(multiLicenseProbe);
+    stubRoutes({
+      "https://rwfc.net/api/roomstatus": fixture("roomstatus.json"),
+      [`https://rwfc.net/api/leaderboard/player/${COOPER_FC}/history/recent`]: [],
+      [`https://rwfc.net/api/leaderboard/player/${COOPER_FC}`]: {
+        pid: "118883", name: "Cooper", friendCode: COOPER_FC, vr: 51309, rank: 1234
+      }
+    });
+    const config = makeConfig({ mode: "auto", friendCode: "" });
+    const poller = new PlayerPoller(makeStore(config));
+    await poll(poller);
+
+    expect(poller.player.friendCode).toBe(COOPER_FC);
+    expect(poller.player.name).toBe("Cooper");
+    expect(poller.player.online).toBe(true);
+    expect(poller.player.rank).toBe(1234);
+    expect(poller.status.licenses).toEqual([
+      { slot: 0, name: "AltLicense", friendCode: "1234-5678-0000", active: false },
+      { slot: 1, name: "Cooper", friendCode: COOPER_FC, active: true }
+    ]);
+  });
+
+  it("respects a pinned license slot over auto-follow", async () => {
+    resolveIdentityMock.mockReturnValue(multiLicenseProbe);
+    stubRoutes({
+      "https://rwfc.net/api/roomstatus": fixture("roomstatus.json"),
+      "https://rwfc.net/api/leaderboard/player/1234-5678-0000/history/recent": [],
+      "https://rwfc.net/api/leaderboard/player/1234-5678-0000": {
+        pid: "111", name: "AltLicense", friendCode: "1234-5678-0000", vr: 5100, rank: 50000
+      }
+    });
+    const config = makeConfig({ mode: "auto", friendCode: "" });
+    config.identity.licenseSlot = 0;
+    const poller = new PlayerPoller(makeStore(config));
+    await poll(poller);
+
+    expect(poller.player.friendCode).toBe("1234-5678-0000");
+    expect(poller.player.online).toBe(false); // pinned license is not in any room
+    expect(poller.player.vr).toBe(5100);
+    expect(poller.status.licenses?.find((entry) => entry.active)?.slot).toBe(0);
+  });
+
+  it("clears room-scoped data when the player is no longer seated", async () => {
+    stubRoutes({
+      "https://rwfc.net/api/roomstatus": fixture("roomstatus.json"),
+      [`https://rwfc.net/api/leaderboard/player/${FC}/history/recent`]: 404,
+      [`https://rwfc.net/api/leaderboard/player/${FC}`]: 404
+    });
+    const poller = new PlayerPoller(makeStore(makeConfig()));
+    await poll(poller);
+    expect(poller.player.extras?.trackName).toContain("Shroom Ridge");
+
+    stubRoutes({
+      "https://rwfc.net/api/roomstatus": { rooms: [] },
+      [`https://rwfc.net/api/leaderboard/player/${FC}`]: 404
+    });
+    await poll(poller);
+    expect(poller.player.room).toBe("");
+    expect(poller.player.race).toBeNull();
+    expect(poller.player.extras).toBeUndefined();
   });
 
   it("learns the friend code from a name match in manual mode", async () => {

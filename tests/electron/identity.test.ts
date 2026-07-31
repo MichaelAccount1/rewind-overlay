@@ -9,7 +9,8 @@ import {
   friendCodeToPid,
   parsePulRatings,
   parseRksysLicenses,
-  resolveIdentity
+  resolveIdentity,
+  sourceStamp
 } from "../../electron/identity.js";
 
 /** Builds a minimal rksys.dat: valid header plus a single populated license slot. */
@@ -158,6 +159,18 @@ describe("resolveIdentity (fixture tree)", () => {
     const probe = resolveIdentity({ appData, home: root, noRegistry: true });
     expect(probe.identity?.friendCode).toBe("3951-3710-1436");
     expect(probe.identity?.vr).toBe(5000); // no Pulsar file → save VR
+  });
+
+  it("changes the source stamp when a watched file is rewritten", () => {
+    const file = path.join(root, "stamp-probe.bin");
+    fs.writeFileSync(file, "one");
+    const before = sourceStamp([file, path.join(root, "missing.bin")]);
+    expect(before).toContain("stamp-probe.bin");
+    expect(before).toContain("missing.bin:absent");
+
+    const past = new Date(Date.now() - 60_000);
+    fs.utimesSync(file, past, past);
+    expect(sourceStamp([file, path.join(root, "missing.bin")])).not.toBe(before);
   });
 
   it("reports a helpful trail when nothing is installed", () => {
