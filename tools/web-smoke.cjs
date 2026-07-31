@@ -34,9 +34,11 @@ app.whenReady().then(async () => {
     const result = await studio.webContents.executeJavaScript(`({
       studio: Boolean(document.querySelector(".web-studio")),
       preview: Boolean(document.querySelector(".preview-canvas .overlay-card")),
-      pages: document.querySelectorAll(".sidebar nav button").length
+      pages: document.querySelectorAll(".sidebar nav button").length,
+      rwfcAllowed: document.querySelector('meta[http-equiv="Content-Security-Policy"]')
+        ?.content.includes("connect-src 'self' https://rwfc.net") === true
     })`);
-    if (!result.studio || !result.preview || result.pages < 7) {
+    if (!result.studio || !result.preview || result.pages < 7 || !result.rwfcAllowed) {
       throw new Error(`Hosted Studio did not render completely: ${JSON.stringify(result)}`);
     }
     fs.mkdirSync(output, { recursive: true });

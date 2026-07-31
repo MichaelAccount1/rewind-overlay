@@ -14,6 +14,8 @@ The hosted edition provides the same Rewind Overlay renderer and appearance cont
 
 A source size around 1000 × 300 works well. The page outside the badge is transparent.
 
+Use **Export JSON** to download a portable copy of the complete player and visual profile. **Import JSON** accepts both hosted-web profiles and desktop Rewind Overlay profile files.
+
 ## Architecture and privacy
 
 GitHub Pages serves only static HTML, CSS, and JavaScript. Each open overlay polls the public RWFC API directly from the browser. Rewind Overlay does not operate an intermediary data server, database, account system, or analytics service.

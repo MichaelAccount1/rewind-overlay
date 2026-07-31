@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { defaultConfig, normalizeFriendCode, serializeWebSettings, type WebSettings } from "./data";
+import { useRef, useState, type ChangeEvent } from "react";
+import { defaultConfig, normalizeFriendCode, parseWebSettings, serializeWebSettings, type WebSettings } from "./data";
 import type { ChangeAnimation, OverlayConfig } from "../types";
 import { Overlay } from "../components/Overlay";
 import {
@@ -32,6 +32,13 @@ const animationOptions: { value: ChangeAnimation; label: string }[] = [
   { value: "none", label: "None" }
 ];
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const looksLikeOverlayConfig = (value: unknown): value is Record<string, unknown> =>
+  isRecord(value) && ["identity", "visibility", "background", "border", "animations", "elements", "data"]
+    .some((key) => isRecord(value[key]));
+
 function partialFriendCode(value: string): string {
   const digits = value.replace(/\D/g, "").slice(0, 12);
   return [digits.slice(0, 4), digits.slice(4, 8), digits.slice(8, 12)].filter(Boolean).join("-");
@@ -45,6 +52,7 @@ export function WebStudio({ settings, snapshot, onSettings }: {
   const [page, setPage] = useState<Page>("connect");
   const [friendCodeDraft, setFriendCodeDraft] = useState(settings.friendCode);
   const [notice, setNotice] = useState("");
+  const importRef = useRef<HTMLInputElement>(null);
 
   const updateConfig = (config: OverlayConfig, extras: Partial<WebSettings> = {}) => {
     onSettings({ ...settings, ...extras, config });
@@ -84,6 +92,51 @@ export function WebStudio({ settings, snapshot, onSettings }: {
     await navigator.clipboard.writeText(overlayUrl);
     flash("Hosted overlay URL copied");
   };
+  const exportProfile = () => {
+    const profile = {
+      format: "rewind-overlay-web-profile",
+      version: 1,
+      friendCode: settings.friendCode,
+      playerName: settings.playerName,
+      tag: settings.tag,
+      demo: settings.demo,
+      pollSeconds: settings.pollSeconds,
+      config: settings.config
+    };
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(new Blob([JSON.stringify(profile, null, 2)], { type: "application/json" }));
+    link.download = "rewind-overlay-web-profile.json";
+    link.click();
+    URL.revokeObjectURL(link.href);
+    flash("Web profile exported");
+  };
+  const importProfile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      const parsed: unknown = JSON.parse(await file.text());
+      if (!isRecord(parsed)) throw new Error("Profile must be an object");
+      const wrapped = parsed.format === "rewind-overlay-web-profile";
+      const configPatch = wrapped ? parsed.config : parsed;
+      if (!looksLikeOverlayConfig(configPatch)) throw new Error("Profile has no overlay settings");
+      const query = serializeWebSettings({
+        configPatch,
+        friendCode: wrapped && typeof parsed.friendCode === "string" ? parsed.friendCode : settings.friendCode,
+        playerName: wrapped && typeof parsed.playerName === "string" ? parsed.playerName : settings.playerName,
+        tag: wrapped && typeof parsed.tag === "string" ? parsed.tag : settings.tag,
+        demo: wrapped && typeof parsed.demo === "boolean" ? parsed.demo : settings.demo,
+        pollSeconds: wrapped && typeof parsed.pollSeconds === "number" ? parsed.pollSeconds : settings.pollSeconds
+      });
+      const next = parseWebSettings(query);
+      setFriendCodeDraft(next.friendCode);
+      onSettings(next);
+      flash(wrapped ? "Web profile imported" : "Desktop profile imported");
+    } catch {
+      flash("That file is not a valid Rewind Overlay profile");
+    } finally {
+      event.target.value = "";
+    }
+  };
 
   return (
     <div className="studio web-studio">
@@ -111,6 +164,8 @@ export function WebStudio({ settings, snapshot, onSettings }: {
           <div><p className="eyebrow">RETRO REWIND · ZERO-INSTALL BROADCAST TOOLS</p><h1>{pages.find((item) => item.id === page)?.label}</h1></div>
           <div className="top-actions">
             <span className="save-state">Saved in this browser</span>
+            <button className="button button-ghost" onClick={() => importRef.current?.click()}>Import JSON</button>
+            <button className="button button-ghost" onClick={exportProfile}>Export JSON</button>
             <button className="button button-ghost" onClick={() => window.open(overlayUrl, "_blank")}>Open overlay</button>
             <button className="button button-primary" onClick={() => void copySource()}>Copy source URL</button>
           </div>
@@ -175,7 +230,14 @@ export function WebStudio({ settings, snapshot, onSettings }: {
             {page === "background" && <WebBackgroundPanel config={settings.config} patch={patch} />}
             {page === "border" && <BorderPanel config={settings.config} patch={patch} />}
             {page === "animation" && <WebAnimationPanel config={settings.config} patch={patch} />}
-            {page === "publish" && <PublishPanel overlayUrl={overlayUrl} copy={() => void copySource()} />}
+            {page === "publish" && (
+              <PublishPanel
+                overlayUrl={overlayUrl}
+                copy={() => void copySource()}
+                importProfile={() => importRef.current?.click()}
+                exportProfile={exportProfile}
+              />
+            )}
           </div>
           <aside className="preview-pane">
             <div className="preview-heading"><span>LIVE PREVIEW</span><b>Same renderer as desktop</b></div>
@@ -192,6 +254,7 @@ export function WebStudio({ settings, snapshot, onSettings }: {
         </div>
       </main>
       {notice && <div className="toast">{notice}</div>}
+      <input ref={importRef} hidden type="file" accept="application/json,.json" onChange={(event) => void importProfile(event)} />
     </div>
   );
 }
@@ -235,7 +298,12 @@ function WebAnimationPanel({ config, patch }: { config: OverlayConfig; patch: Co
   );
 }
 
-function PublishPanel({ overlayUrl, copy }: { overlayUrl: string; copy: () => void }) {
+function PublishPanel({ overlayUrl, copy, importProfile, exportProfile }: {
+  overlayUrl: string;
+  copy: () => void;
+  importProfile: () => void;
+  exportProfile: () => void;
+}) {
   return (
     <>
       <Section title="Hosted browser source" description="One HTTPS link works in OBS and TikTok Live Studio without the desktop companion running.">
@@ -253,6 +321,12 @@ function PublishPanel({ overlayUrl, copy }: { overlayUrl: string; copy: () => vo
       </Section>
       <Section title="Desktop edition" description="Use the downloadable app when you want automatic Wheel Wizard identity, multi-license following, local image uploads, or a floating always-on-top badge.">
         <div className="action-row"><a className="button button-ghost web-button-link" href="https://github.com/MichaelAccount1/rewind-overlay/releases/latest">Download desktop app</a></div>
+      </Section>
+      <Section title="Profiles & portability" description="Save every visual and player setting to a JSON file, or import a web or desktop Rewind Overlay profile.">
+        <div className="action-row">
+          <button className="button button-ghost" onClick={exportProfile}>Export JSON profile</button>
+          <button className="button button-ghost" onClick={importProfile}>Import JSON profile</button>
+        </div>
       </Section>
     </>
   );

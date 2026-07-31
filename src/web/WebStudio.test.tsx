@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { defaultConfig, defaultPlayer } from "../../electron/models";
 import type { Snapshot } from "../types";
@@ -69,5 +69,40 @@ describe("WebStudio", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /OBS & TikTok/ }));
     expect(screen.getByText(/TikTok Live Studio use Link \/ Web Page Source/i)).toBeInTheDocument();
+  });
+
+  it("imports a desktop JSON profile and keeps the current web identity", async () => {
+    const { settings, snapshot } = fixture();
+    settings.friendCode = "3822-5220-6288";
+    settings.demo = false;
+    const onSettings = vi.fn();
+    const { container } = render(<WebStudio settings={settings} snapshot={snapshot} onSettings={onSettings} />);
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+    const profile = {
+      text: async () => JSON.stringify({
+        visibility: { avatar: false },
+        background: { color: "#123456" }
+      })
+    };
+
+    fireEvent.change(input, { target: { files: [profile] } });
+
+    await waitFor(() => expect(onSettings).toHaveBeenCalledWith(expect.objectContaining({
+      friendCode: "3822-5220-6288",
+      demo: false,
+      config: expect.objectContaining({
+        visibility: expect.objectContaining({ avatar: false }),
+        background: expect.objectContaining({ color: "#123456" })
+      })
+    })));
+    expect(screen.getByText("Desktop profile imported")).toBeInTheDocument();
+  });
+
+  it("offers JSON profile import and export in the top bar", () => {
+    const { settings, snapshot } = fixture();
+    render(<WebStudio settings={settings} snapshot={snapshot} onSettings={vi.fn()} />);
+
+    expect(screen.getByRole("button", { name: "Import JSON" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Export JSON" })).toBeInTheDocument();
   });
 });
