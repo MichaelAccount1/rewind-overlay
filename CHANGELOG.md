@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.1.1
 
 - Allow the hosted page to connect to the HTTPS RWFC API under its strict Content Security Policy.
 - Add JSON profile import and export to the Web Overlay Studio, including desktop-profile import compatibility.
