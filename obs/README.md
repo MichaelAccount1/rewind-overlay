@@ -3,6 +3,15 @@
 Two ways to get the overlay into OBS. Both require the Rewind Overlay app to be
 running (it serves the overlay locally and feeds it live Retro Rewind data).
 
+> **Use a Browser source — do not screen-capture the floating badge.**
+> The floating badge is for *your* eyes while you play. OBS gets its own private
+> copy of the overlay through the browser source below, straight from the app —
+> it keeps rendering and updating even when the badge is hidden, minimized, or
+> the game is fullscreen over it. If you instead point Window/Display/Game
+> Capture at the badge, your stream loses the overlay the moment the badge is
+> minimized or hidden, because Windows stops drawing windows that are not on
+> screen. Hide the badge freely; the browser source doesn't care.
+
 ## Option A — setup script (recommended)
 
 1. OBS → **Tools → Scripts** → **+** → select `rewind-overlay.lua`
@@ -30,6 +39,12 @@ Add a **Browser** source with:
 
 ## Troubleshooting
 
+- **Overlay disappears from the stream when the badge is minimized/hidden** —
+  the scene is using Window Capture or Display Capture of the floating badge.
+  Delete that capture and add the overlay as a **Browser** source (Option A or
+  B above). The browser source is fed directly by the app and works with the
+  badge hidden — verified: the app's data stream keeps broadcasting with the
+  overlay window fully hidden.
 - **Black/empty source** — the app isn't running, or another program took port
   19488. The Studio window shows the exact URL it is serving.
 - **Overlay shows but no data** — check the connection panel in Studio; it

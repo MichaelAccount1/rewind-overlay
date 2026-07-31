@@ -93,7 +93,10 @@ function script_description()
 (VR, last-race gain/loss, global rank, player tag).</p>
 <p><b>Start the Rewind Overlay app first</b>, then click the button below.
 All styling (border effects, background, animations) is controlled live from
-the app's Studio window - no OBS restart needed.</p>]]
+the app's Studio window - no OBS restart needed.</p>
+<p>This browser source is fed directly by the app, so it keeps working while
+the floating badge is hidden or minimized. Do not use Window/Display Capture
+of the badge for your stream.</p>]]
 end
 
 function script_properties()
