@@ -397,21 +397,21 @@ function OutputPanel({ config, patch, flash, exportSettings, importSettings }: {
       <Section title="OBS Studio" description="The included OBS script adds this browser source in one click. Manual setup works everywhere.">
         <div className="obs-callout">
           <span className="obs-logo">◉</span>
-          <div><b>Browser source is ready</b><small>Keep Rewind Overlay running while streaming.</small></div>
+          <div><b>Independent browser source is ready</b><small>Hide or minimize the floating badge freely; OBS keeps its own live copy.</small></div>
           <span className="ready-pill">READY</span>
         </div>
         <Field wide label="Local overlay URL"><span className="copy-field"><code>{obsUrl}</code><button onClick={copy}>Copy</button></span></Field>
         <div className="instruction-list">
           <span>1</span><p><b>Tools → Scripts → +</b><small>Select <code>rewind-overlay.lua</code> from the app's OBS folder.</small></p>
           <span>2</span><p><b>Click “Add overlay to current scene”</b><small>The plugin creates a transparent, hardware-accelerated browser source.</small></p>
-          <span>3</span><p><b>Crop and position in your scene</b><small>All styling stays controlled here—no OBS property juggling.</small></p>
+          <span>3</span><p><b>Use Browser Source, not Window Capture</b><small>Window Capture disappears with a hidden badge; this browser source does not.</small></p>
         </div>
       </Section>
       <Section title="Floating desktop overlay" description="A transparent, borderless window that remains above the game.">
         <div className="action-row output-buttons">
           <button className="button button-primary" onClick={() => api.window("show")}>Show window</button>
           <button className="button button-ghost" onClick={() => api.window("center")}>Center on screen</button>
-          <button className="button button-ghost" onClick={() => api.window("hide")}>Hide</button>
+          <button className="button button-ghost" onClick={() => api.window("hide")}>Hide window (OBS stays live)</button>
         </div>
         <Field label="Always on top"><Toggle label="Always on top" checked={config.desktop.alwaysOnTop} onChange={(value) => patch("desktop", "alwaysOnTop", value)} /></Field>
         <Field label="Click through" hint="Use the tray menu to turn this off again"><Toggle label="Click through" checked={config.desktop.clickThrough} onChange={(value) => patch("desktop", "clickThrough", value)} /></Field>
