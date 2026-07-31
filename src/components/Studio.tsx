@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { defaultConfig } from "../../electron/models";
 import { api } from "../api";
 import type { BorderEffect, ChangeAnimation, OverlayConfig, OverlayElementKey, Snapshot } from "../types";
+import { imageFileToDataUrl } from "../web/data";
 import { Overlay } from "./Overlay";
 import { ColorInput, Field, Range, Section, Segmented, Toggle } from "./controls";
 import "../styles/studio.css";
@@ -77,9 +78,19 @@ export function Studio({ snapshot, connectionError }: { snapshot: Snapshot; conn
   const exportSettings = async () => {
     try {
       const { dataUrl } = await api.exportBackground();
+      let portableImageUrl = dataUrl;
+      if (dataUrl.startsWith("data:image/")) {
+        const [header, encoded = ""] = dataUrl.split(",", 2);
+        const mime = /^data:([^;]+)/.exec(header)?.[1] ?? "image/png";
+        const bytes = header.endsWith(";base64")
+          ? Uint8Array.from(atob(encoded), (character) => character.charCodeAt(0))
+          : new TextEncoder().encode(decodeURIComponent(encoded));
+        const compressed = await imageFileToDataUrl(new Blob([bytes], { type: mime }));
+        portableImageUrl = compressed.dataUrl;
+      }
       const portable = {
         ...draft,
-        background: { ...draft.background, imageUrl: dataUrl }
+        background: { ...draft.background, imageUrl: portableImageUrl }
       };
       const blob = new Blob([JSON.stringify(portable, null, 2)], { type: "application/json" });
       const link = document.createElement("a");

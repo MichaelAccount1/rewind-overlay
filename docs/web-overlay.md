@@ -14,7 +14,7 @@ The hosted edition provides the same Rewind Overlay renderer and appearance cont
 
 A source size around 1000 × 300 works well. The page outside the badge is transparent.
 
-Use **Export JSON** to download a portable copy of the complete player and visual profile, including an embedded background image. **Import JSON** accepts both hosted-web profiles and desktop Rewind Overlay profile files.
+Use **Export JSON** to download a portable copy of the complete player and visual profile, including a compressed, embedded background image. **Import JSON** accepts both hosted-web profiles and desktop Rewind Overlay profile files.
 
 ## Architecture and privacy
 

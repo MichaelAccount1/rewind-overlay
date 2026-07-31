@@ -21,7 +21,10 @@ const snapshot = (): Snapshot => ({
   }
 });
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
 
 describe("Studio license picker", () => {
   it("shows every detected license and lets the user pin a slot", async () => {
@@ -108,5 +111,50 @@ describe("Studio license picker", () => {
       })
     }));
     expect(screen.getByText("Portable profile imported")).toBeInTheDocument();
+  });
+
+  it("compresses a desktop-local background into a portable profile export", async () => {
+    const embedded = "data:image/png;base64,SGVsbG8=";
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url === "/api/background/export") {
+        return { ok: true, json: async () => ({ dataUrl: embedded }) };
+      }
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    vi.stubGlobal("createImageBitmap", vi.fn(async () => ({ width: 1920, height: 1080, close: vi.fn() })));
+    vi.stubGlobal("OffscreenCanvas", class {
+      getContext() { return { drawImage: vi.fn() }; }
+      async convertToBlob() {
+        return {
+          size: 2,
+          type: "image/jpeg",
+          arrayBuffer: async () => new Uint8Array([72, 105]).buffer
+        };
+      }
+    });
+    const createObjectURL = vi.fn(() => "blob:portable-profile");
+    const OriginalURL = URL;
+    const URLShim = function (input: string | URL, base?: string | URL) {
+      return new OriginalURL(input, base);
+    } as unknown as typeof URL;
+    URLShim.prototype = OriginalURL.prototype;
+    vi.stubGlobal("URL", Object.assign(URLShim, {
+      createObjectURL,
+      revokeObjectURL: vi.fn()
+    }));
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+    render(<Studio snapshot={snapshot()} connectionError="" />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Export" }));
+
+    await waitFor(() => expect(screen.getByText("Portable profile exported")).toBeInTheDocument());
+    expect(fetchMock).toHaveBeenNthCalledWith(1, "/api/background/export", expect.any(Object));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(createImageBitmap).toHaveBeenCalledWith(expect.objectContaining({
+      size: 5,
+      type: "image/png"
+    }));
+    expect(createObjectURL).toHaveBeenCalledWith(expect.any(Blob));
   });
 });
