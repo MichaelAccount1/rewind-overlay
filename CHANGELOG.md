@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.3
+
+- Add a dedicated Mii section with an explicit hide switch, solid and gradient backing colors, and a fully transparent backing.
+- Clarify inside Studio and the OBS setup script that streams must use the independent Browser Source rather than capture the floating window.
+- Confirm that the local data service and OBS event stream continue updating while the floating badge is hidden.
+- Make the floating-window Hide action explicitly state that OBS remains live.
+
 ## 1.0.2
 
 - Give the floating overlay a glow-aware transparent gutter so animated light is never clipped by the native window.

@@ -8,7 +8,7 @@
  */
 import { z } from "zod";
 
-export const USER_AGENT = "RewindOverlay/1.0.2 (+https://github.com/MichaelAccount1/rewind-overlay)";
+export const USER_AGENT = "RewindOverlay/1.0.3 (+https://github.com/MichaelAccount1/rewind-overlay)";
 const TIMEOUT_MS = 10_000;
 
 /** Distinguishes "player has never been seen by the leaderboard" from real failures. */

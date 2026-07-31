@@ -21,6 +21,7 @@ The same renderer powers the Studio preview, OBS Browser Source, and floating de
 - **Deep art direction.** Upload, crop, pan, zoom and filter a background; adjust tint, contrast, saturation, blur and glass treatment.
 - **Advanced light engine.** Prism, chaser, pulse, wave, ghost and solid frames with independent colors, speed, width, radius and glow.
 - **Event animation.** Choose count, spring, flip, impact or no motion separately for VR and rank; large gains can trigger a celebration.
+- **Mii control.** Show or remove the Mii icon, use a clear backing, or choose solid and gradient backing colors.
 - **Stream-safe.** Localhost-only server, no telemetry, persistent profiles, reconnect handling and a reduced-motion option.
 
 ## Install
@@ -42,6 +43,11 @@ Rewind Overlay includes an OBS Lua integration:
 2. In OBS, open **Tools → Scripts**, click **+**, and choose `rewind-overlay.lua` from the installed app's `resources/obs` folder.
 3. Set the canvas size if desired and click **Add overlay to current scene**.
 
+OBS receives an independent Browser Source directly from the app. Do not use
+Window or Display Capture on the floating badge: Windows stops drawing a hidden
+or minimized window. With the Browser Source, you can hide the desktop badge
+and the stream overlay continues updating.
+
 For manual setup, add a Browser Source with:
 
 ```text
@@ -51,11 +57,11 @@ Height: 260
 FPS:    60
 ```
 
-The page is transparent. Leave custom CSS empty. See the [OBS guide](docs/obs.md) for exact installation paths and troubleshooting.
+The page is transparent. Leave custom CSS empty. See the [OBS guide](obs/README.md) for exact installation paths and troubleshooting.
 
 ## Desktop overlay
 
-The desktop window is transparent, resizable, draggable and always on top. Enable **Click through** once it is positioned so the game receives all mouse input. The tray menu remains available to turn click-through off, show or hide the overlay, and reopen Studio.
+The desktop window is transparent, self-sizing, draggable and always on top. Enable **Click through** once it is positioned so the game receives all mouse input. The tray menu remains available to turn click-through off, show or hide the overlay, and reopen Studio.
 
 ## Data flow
 
