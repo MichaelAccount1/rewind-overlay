@@ -29,7 +29,7 @@
     "test:watch": "vitest",
     "icon": "node tools/icon.cjs",
     "screenshots": "npm run build && electron tools/capture.cjs",
-    "smoke:web": "npm run build:web && electron tools/web-smoke.cjs",
+    "smoke:web": "npm run build:web && electron --no-sandbox tools/web-smoke.cjs",
     "package": "npm run build && npm run icon && electron-builder",
     "start": "electron ."
   },
