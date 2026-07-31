@@ -33,7 +33,7 @@ Open the [zero-install Web Overlay Studio](https://michaelaccount1.github.io/rew
 - In **TikTok LIVE Studio**, add it as a Link / Web Page Source.
 - No Rewind server, account, or paid hosting is involved. The static page polls the public RWFC API directly and stores the profile in the configured URL.
 
-The browser sandbox cannot automatically read Wheel Wizard licenses or share an uploaded local image with a separate broadcast source. Use a friend code and an HTTPS image URL in the web edition. The desktop app remains the full-featured option for automatic multi-license following, local uploads, and the always-on-top floating window. See the [web overlay guide](docs/web-overlay.md).
+The browser sandbox cannot automatically read Wheel Wizard licenses, so the web edition uses a friend code. Local backgrounds are supported: the Studio resizes and compresses the image in-browser, then embeds it in the configured source URL and portable JSON profile. The desktop app remains the full-featured option for automatic multi-license following and the always-on-top floating window. See the [web overlay guide](docs/web-overlay.md).
 
 ## Install
 

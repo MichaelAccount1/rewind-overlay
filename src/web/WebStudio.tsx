@@ -1,5 +1,13 @@
 import { useRef, useState, type ChangeEvent } from "react";
-import { defaultConfig, normalizeFriendCode, parseWebSettings, serializeWebSettings, type WebSettings } from "./data";
+import {
+  defaultConfig,
+  imageFileToDataUrl,
+  LINK_SIZE_WARNING_BYTES,
+  normalizeFriendCode,
+  parseWebSettings,
+  serializeWebSettings,
+  type WebSettings
+} from "./data";
 import type { ChangeAnimation, OverlayConfig } from "../types";
 import { Overlay } from "../components/Overlay";
 import {
@@ -88,9 +96,12 @@ export function WebStudio({ settings, snapshot, onSettings }: {
   });
   const baseUrl = new URL(import.meta.env.BASE_URL, location.origin);
   const overlayUrl = `${baseUrl.href}?view=overlay&${sourceQuery}`;
+  const linkTooLarge = overlayUrl.length > LINK_SIZE_WARNING_BYTES;
   const copySource = async () => {
     await navigator.clipboard.writeText(overlayUrl);
-    flash("Hosted overlay URL copied");
+    flash(linkTooLarge
+      ? "URL copied — use a hosted image if your broadcast app rejects this very long link"
+      : "Hosted overlay URL copied");
   };
   const exportProfile = () => {
     const profile = {
@@ -227,7 +238,9 @@ export function WebStudio({ settings, snapshot, onSettings }: {
             )}
             {page === "content" && <ContentPanel config={settings.config} patch={patch} />}
             {page === "elements" && <ElementLayoutPanel config={settings.config} patch={patch} resetAll={resetElements} />}
-            {page === "background" && <WebBackgroundPanel config={settings.config} patch={patch} />}
+            {page === "background" && (
+              <WebBackgroundPanel config={settings.config} patch={patch} flash={flash} linkTooLarge={linkTooLarge} />
+            )}
             {page === "border" && <BorderPanel config={settings.config} patch={patch} />}
             {page === "animation" && <WebAnimationPanel config={settings.config} patch={patch} />}
             {page === "publish" && (
@@ -236,6 +249,7 @@ export function WebStudio({ settings, snapshot, onSettings }: {
                 copy={() => void copySource()}
                 importProfile={() => importRef.current?.click()}
                 exportProfile={exportProfile}
+                linkTooLarge={linkTooLarge}
               />
             )}
           </div>
@@ -259,20 +273,69 @@ export function WebStudio({ settings, snapshot, onSettings }: {
   );
 }
 
-function WebBackgroundPanel({ config, patch }: { config: OverlayConfig; patch: ConfigPatch }) {
+function WebBackgroundPanel({ config, patch, flash, linkTooLarge }: {
+  config: OverlayConfig;
+  patch: ConfigPatch;
+  flash: (message: string) => void;
+  linkTooLarge: boolean;
+}) {
   const bg = config.background;
+  const hasEmbeddedImage = bg.imageUrl.startsWith("data:image/");
+  const imageRef = useRef<HTMLInputElement>(null);
+  const [processing, setProcessing] = useState(false);
+  const uploadBackground = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setProcessing(true);
+    try {
+      const embedded = await imageFileToDataUrl(file);
+      await patch("background", "imageUrl", embedded.dataUrl);
+      flash(`Background embedded · ${embedded.width}×${embedded.height} · ${Math.ceil(embedded.bytes / 1024)} KB`);
+    } catch (error) {
+      flash(error instanceof Error ? error.message : "Could not process that image");
+    } finally {
+      setProcessing(false);
+      event.target.value = "";
+    }
+  };
+
   return (
     <>
-      <Section title="Hosted artwork" description="Paste an HTTPS image address so OBS and TikTok can load it. Browser security prevents a local upload from being shared into a separate source.">
-        <Field wide label="Background image URL" hint="PNG, JPEG, WebP, GIF, or another browser-readable image">
-          <input className="text-input url" value={bg.imageUrl} placeholder="https://example.com/background.png" onChange={(event) => patch("background", "imageUrl", event.target.value)} />
+      <Section title="Background artwork" description="Choose a local image and Rewind will resize, compress, and embed it—no Imgur or image host required.">
+        <Field label="Local image" hint="PNG, JPEG, WebP, or GIF; processed privately in this browser">
+          <div className="action-row">
+            <button
+              className="button button-primary"
+              aria-label="Browse local image"
+              disabled={processing}
+              onClick={() => imageRef.current?.click()}
+            >
+              {processing ? "Processing…" : "Browse local image"}
+            </button>
+            {bg.imageUrl && <button className="button button-ghost" onClick={() => void patch("background", "imageUrl", "")}>Remove</button>}
+          </div>
         </Field>
+        <Field wide label="Or use an HTTPS image URL" hint="Best for the shortest, most widely compatible broadcast-source link">
+          <input
+            className="text-input url"
+            value={hasEmbeddedImage ? "" : bg.imageUrl}
+            placeholder={hasEmbeddedImage ? "Local image embedded in this profile" : "https://example.com/background.png"}
+            onChange={(event) => patch("background", "imageUrl", event.target.value)}
+          />
+        </Field>
+        {linkTooLarge && (
+          <div className="web-link-warning">
+            <b>Very long source URL</b>
+            <span>The embedded image is included in your copied overlay link. If OBS or TikTok rejects it, use an HTTPS image URL above instead.</span>
+          </div>
+        )}
         <Field label="Image fit"><Segmented value={bg.fit} onChange={(value) => patch("background", "fit", value)} options={[
           { value: "cover", label: "Cover" }, { value: "contain", label: "Contain" }, { value: "stretch", label: "Stretch" }
         ]} /></Field>
         <Field label="Horizontal position"><Range value={bg.x} min={0} max={100} unit="%" onChange={(value) => patch("background", "x", value)} /></Field>
         <Field label="Vertical position"><Range value={bg.y} min={0} max={100} unit="%" onChange={(value) => patch("background", "y", value)} /></Field>
         <Field label="Zoom"><Range value={bg.zoom} min={1} max={3} step={0.05} unit="×" onChange={(value) => patch("background", "zoom", value)} /></Field>
+        <input ref={imageRef} hidden type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(event) => void uploadBackground(event)} />
       </Section>
       <Section title="Image treatment" description="Broadcast-safe contrast without editing the original image.">
         <Field label="Brightness"><Range value={bg.brightness} min={0.15} max={1.5} step={0.05} unit="×" onChange={(value) => patch("background", "brightness", value)} /></Field>
@@ -298,11 +361,12 @@ function WebAnimationPanel({ config, patch }: { config: OverlayConfig; patch: Co
   );
 }
 
-function PublishPanel({ overlayUrl, copy, importProfile, exportProfile }: {
+function PublishPanel({ overlayUrl, copy, importProfile, exportProfile, linkTooLarge }: {
   overlayUrl: string;
   copy: () => void;
   importProfile: () => void;
   exportProfile: () => void;
+  linkTooLarge: boolean;
 }) {
   return (
     <>
@@ -313,6 +377,12 @@ function PublishPanel({ overlayUrl, copy, importProfile, exportProfile }: {
           <span className="ready-pill">HTTPS</span>
         </div>
         <Field wide label="Your private configured URL"><span className="copy-field"><code>{overlayUrl}</code><button onClick={copy}>Copy</button></span></Field>
+        {linkTooLarge && (
+          <div className="web-link-warning">
+            <b>This source URL is unusually long</b>
+            <span>Your local background is embedded in it. It should work in modern browser sources, but an HTTPS background image is the fallback for tools with URL-length limits.</span>
+          </div>
+        )}
         <div className="instruction-list">
           <span>1</span><p><b>Add a browser or web source</b><small>In OBS use Browser Source. In TikTok Live Studio use Link / Web Page Source.</small></p>
           <span>2</span><p><b>Paste this HTTPS URL</b><small>Use a transparent source at roughly 1000 × 300, then resize it in your scene.</small></p>

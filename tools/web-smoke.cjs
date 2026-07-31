@@ -41,6 +41,19 @@ app.whenReady().then(async () => {
     if (!result.studio || !result.preview || result.pages < 7 || !result.rwfcAllowed) {
       throw new Error(`Hosted Studio did not render completely: ${JSON.stringify(result)}`);
     }
+    const background = await studio.webContents.executeJavaScript(`(() => {
+      const button = [...document.querySelectorAll(".sidebar nav button")]
+        .find((item) => item.textContent.includes("Background"));
+      button?.click();
+      return Boolean(button);
+    })()`);
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    const localUpload = await studio.webContents.executeJavaScript(
+      `Boolean(document.querySelector('button[aria-label="Browse local image"]'))`
+    );
+    if (!background || !localUpload) {
+      throw new Error("Hosted Studio did not expose the local background browser.");
+    }
     fs.mkdirSync(output, { recursive: true });
     fs.writeFileSync(path.join(output, "web-studio.png"), (await studio.webContents.capturePage()).toPNG());
 

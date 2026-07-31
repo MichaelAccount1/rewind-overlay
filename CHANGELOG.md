@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Add a local-image browser to the Web Overlay Studio with private client-side resizing, compression, and embedding.
+- Carry background image bytes inside exported JSON profiles and materialize them on desktop import for true web/desktop portability.
+- Warn when an embedded background produces a source URL that may exceed a broadcast tool's URL-length limit.
+
 ## 1.1.1
 
 - Allow the hosted page to connect to the HTTPS RWFC API under its strict Content Security Policy.

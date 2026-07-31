@@ -33,6 +33,9 @@ const visibilityLabels: Record<keyof OverlayConfig["visibility"], [string, strin
   dailyDelta: ["24-hour change", "Change reported by the leaderboard"]
 };
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
 export function Studio({ snapshot, connectionError }: { snapshot: Snapshot; connectionError: string }) {
   const [page, setPage] = useState<Page>("live");
   const [draft, setDraft] = useState(snapshot.config);
@@ -71,24 +74,44 @@ export function Studio({ snapshot, connectionError }: { snapshot: Snapshot; conn
     reader.readAsDataURL(file);
   };
 
-  const exportSettings = () => {
-    const blob = new Blob([JSON.stringify(draft, null, 2)], { type: "application/json" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = "rewind-overlay-profile.json";
-    link.click();
-    URL.revokeObjectURL(link.href);
-    flash("Profile exported");
+  const exportSettings = async () => {
+    try {
+      const { dataUrl } = await api.exportBackground();
+      const portable = {
+        ...draft,
+        background: { ...draft.background, imageUrl: dataUrl }
+      };
+      const blob = new Blob([JSON.stringify(portable, null, 2)], { type: "application/json" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "rewind-overlay-profile.json";
+      link.click();
+      URL.revokeObjectURL(link.href);
+      flash("Portable profile exported");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Could not export profile");
+    }
   };
 
   const importSettings = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
     try {
-      const parsed = JSON.parse(await file.text()) as unknown;
-      await api.config(parsed);
-      flash("Profile imported");
-    } catch { setNotice("That profile is not valid JSON."); }
+      const parsed: unknown = JSON.parse(await file.text());
+      if (!isRecord(parsed)) throw new Error("Profile must be an object");
+      const candidate = parsed.format === "rewind-overlay-web-profile" ? parsed.config : parsed;
+      if (!isRecord(candidate)) throw new Error("Profile has no overlay settings");
+      const config = structuredClone(candidate);
+      const background = isRecord(config.background) ? config.background : null;
+      if (background && typeof background.imageUrl === "string" && background.imageUrl.startsWith("data:image/")) {
+        const { imageUrl } = await api.background(background.imageUrl);
+        background.imageUrl = imageUrl;
+      }
+      await api.config(config);
+      flash("Portable profile imported");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "That profile is not valid JSON.");
+    }
     event.target.value = "";
   };
 

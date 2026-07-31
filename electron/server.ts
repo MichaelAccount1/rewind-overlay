@@ -99,6 +99,13 @@ export class LocalServer {
         res.status(400).json({ error: error instanceof Error ? error.message : "Could not save image" });
       }
     });
+    this.web.get("/api/background/export", (_req, res) => {
+      try {
+        res.json({ dataUrl: this.store.exportBackground() });
+      } catch (error) {
+        res.status(400).json({ error: error instanceof Error ? error.message : "Could not export image" });
+      }
+    });
     this.web.post("/api/demo/:kind", (req, res) => {
       const kind = req.params.kind;
       if (!["gain", "loss", "rank", "reset"].includes(kind)) {

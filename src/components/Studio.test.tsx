@@ -72,4 +72,41 @@ describe("Studio license picker", () => {
     ));
     expect(screen.getByText("CUSTOM")).toBeInTheDocument();
   });
+
+  it("materializes an embedded web-profile background before importing it", async () => {
+    const fetchMock = vi.fn(async (url: string) => ({
+      ok: true,
+      json: async () => url === "/api/background"
+        ? { imageUrl: "/user-assets/background.jpg?v=123" }
+        : { config: defaultConfig }
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    const { container } = render(<Studio snapshot={snapshot()} connectionError="" />);
+    const input = container.querySelector('input[accept*=".json"]') as HTMLInputElement;
+    const profile = {
+      text: async () => JSON.stringify({
+        format: "rewind-overlay-web-profile",
+        config: {
+          visibility: { avatar: false },
+          background: { imageUrl: "data:image/jpeg;base64,SGVsbG8=" }
+        }
+      })
+    };
+
+    fireEvent.change(input, { target: { files: [profile] } });
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    expect(fetchMock).toHaveBeenNthCalledWith(1, "/api/background", expect.objectContaining({
+      method: "POST",
+      body: JSON.stringify({ dataUrl: "data:image/jpeg;base64,SGVsbG8=" })
+    }));
+    expect(fetchMock).toHaveBeenNthCalledWith(2, "/api/config", expect.objectContaining({
+      method: "PATCH",
+      body: JSON.stringify({
+        visibility: { avatar: false },
+        background: { imageUrl: "/user-assets/background.jpg?v=123" }
+      })
+    }));
+    expect(screen.getByText("Portable profile imported")).toBeInTheDocument();
+  });
 });

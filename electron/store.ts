@@ -59,6 +59,33 @@ export class ConfigStore {
     return this.config.background.imageUrl;
   }
 
+  exportBackground(): string {
+    const imageUrl = this.config.background.imageUrl;
+    if (!imageUrl || /^(?:data:|https?:)/i.test(imageUrl)) return imageUrl;
+
+    const match = /^\/user-assets\/([^/?#]+)(?:\?[^#]*)?$/.exec(imageUrl);
+    if (!match) throw new Error("The current background is not a portable image.");
+    const fileName = decodeURIComponent(match[1]);
+    if (fileName !== path.basename(fileName)) throw new Error("The current background path is invalid.");
+
+    const filePath = path.resolve(this.userAssetsPath, fileName);
+    if (path.dirname(filePath) !== path.resolve(this.userAssetsPath) || !fs.existsSync(filePath)) {
+      throw new Error("The current background file could not be found.");
+    }
+    const mimeByExtension: Record<string, string> = {
+      ".png": "image/png",
+      ".jpg": "image/jpeg",
+      ".jpeg": "image/jpeg",
+      ".webp": "image/webp",
+      ".gif": "image/gif"
+    };
+    const mime = mimeByExtension[path.extname(fileName).toLowerCase()];
+    if (!mime) throw new Error("The current background format cannot be exported.");
+    const bytes = fs.readFileSync(filePath);
+    if (bytes.byteLength > 20 * 1024 * 1024) throw new Error("Backgrounds must be smaller than 20 MB.");
+    return `data:${mime};base64,${bytes.toString("base64")}`;
+  }
+
   private load(): void {
     try {
       if (fs.existsSync(this.configPath)) {

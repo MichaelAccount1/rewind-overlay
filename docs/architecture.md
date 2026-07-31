@@ -51,9 +51,9 @@ brief outage.
 | `GET` | `/api/events` | SSE snapshot stream |
 | `PATCH` | `/api/config` | merge and persist a partial configuration |
 | `POST` | `/api/background` | validate and persist a data-URL image |
+| `GET` | `/api/background/export` | inline the current local background for a portable profile |
 | `POST` | `/api/demo/:kind` | trigger a preview transition |
 | `POST` | `/api/window/:action` | local desktop window controls |
 
 The service binds to loopback and is intentionally unauthenticated. Do not
 change it to `0.0.0.0` without adding authentication and origin protection.
-

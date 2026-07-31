@@ -24,6 +24,7 @@ export const api = {
   background: (dataUrl: string) => request<{ imageUrl: string }>("/api/background", {
     method: "POST", body: JSON.stringify({ dataUrl })
   }),
+  exportBackground: () => request<{ dataUrl: string }>("/api/background/export"),
   demo: (kind: "gain" | "loss" | "rank" | "reset") =>
     request<Snapshot>(`/api/demo/${kind}`, { method: "POST" }),
   window: (action: "show" | "hide" | "center" | "clickthrough", body?: unknown) =>

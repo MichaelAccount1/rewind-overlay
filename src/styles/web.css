@@ -16,6 +16,12 @@
 .web-privacy-note b { flex: 0 0 auto; color: #72e5b2; font-size: 9px; }
 .web-privacy-note span { font-size: 8px; line-height: 1.5; }
 .web-button-link { display: inline-grid; place-items: center; text-decoration: none; }
+.web-link-warning {
+  margin: 10px 12px 13px; display: flex; align-items: flex-start; gap: 10px; padding: 11px 12px;
+  border: 1px solid #644d27; border-radius: 8px; color: #cbb991; background: #2a2113;
+}
+.web-link-warning b { flex: 0 0 auto; color: #ffd37a; font-size: 9px; }
+.web-link-warning span { font-size: 8px; line-height: 1.5; }
 
 @media (max-width: 1050px) {
   .web-studio .workspace { grid-template-columns: 1fr; }

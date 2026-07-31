@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { defaultConfig, defaultPlayer } from "../../electron/models";
 import type { Snapshot } from "../types";
 import type { WebSettings } from "./data";
@@ -31,6 +31,8 @@ function fixture(): { settings: WebSettings; snapshot: Snapshot } {
     }
   };
 }
+
+afterEach(() => vi.unstubAllGlobals());
 
 describe("WebStudio", () => {
   it("turns a complete friend code into live browser settings", () => {
@@ -104,5 +106,45 @@ describe("WebStudio", () => {
 
     expect(screen.getByRole("button", { name: "Import JSON" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Export JSON" })).toBeInTheDocument();
+  });
+
+  it("offers a local background browser and embeds the processed image", async () => {
+    const { settings, snapshot } = fixture();
+    const onSettings = vi.fn();
+    vi.stubGlobal("createImageBitmap", vi.fn(async () => ({ width: 800, height: 450, close: vi.fn() })));
+    vi.stubGlobal("OffscreenCanvas", class {
+      getContext() { return { drawImage: vi.fn() }; }
+      async convertToBlob() {
+        return {
+          size: 2,
+          type: "image/jpeg",
+          arrayBuffer: async () => new Uint8Array([72, 105]).buffer
+        };
+      }
+    });
+    const { container } = render(<WebStudio settings={settings} snapshot={snapshot} onSettings={onSettings} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Background/ }));
+    expect(screen.getByRole("button", { name: "Browse local image" })).toBeInTheDocument();
+    const input = container.querySelector('input[accept^="image/png"]') as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [{ type: "image/png" }] } });
+
+    await waitFor(() => expect(onSettings).toHaveBeenCalledWith(expect.objectContaining({
+      config: expect.objectContaining({
+        background: expect.objectContaining({
+          imageUrl: expect.stringMatching(/^data:image\/jpeg;base64,/)
+        })
+      })
+    })));
+    expect(screen.getByText(/Background embedded/)).toBeInTheDocument();
+  });
+
+  it("warns when an embedded image makes the source URL unusually long", () => {
+    const { settings, snapshot } = fixture();
+    settings.config.background.imageUrl = `data:image/jpeg;base64,${"A".repeat(1_200_000)}`;
+    render(<WebStudio settings={settings} snapshot={snapshot} onSettings={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /OBS & TikTok/ }));
+    expect(screen.getByText("This source URL is unusually long")).toBeInTheDocument();
   });
 });
