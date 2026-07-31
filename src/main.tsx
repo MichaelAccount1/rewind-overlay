@@ -5,7 +5,7 @@ import "./styles/global.css";
 
 document.documentElement.classList.toggle(
   "overlay-document",
-  window.location.pathname.startsWith("/overlay")
+  window.location.pathname.startsWith("/overlay") || new URLSearchParams(window.location.search).get("view") === "overlay"
 );
 
 createRoot(document.getElementById("root")!).render(

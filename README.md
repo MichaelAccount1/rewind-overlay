@@ -1,6 +1,6 @@
 # Rewind Overlay
 
-Broadcast-quality player stats for **Retro Rewind**. Rewind Overlay turns official Retro WFC data into a configurable OBS source and a transparent, always-on-top desktop widget.
+Broadcast-quality player stats for **Retro Rewind**. Rewind Overlay turns official Retro WFC data into a configurable OBS/TikTok source and a transparent, always-on-top desktop widget.
 
 It tracks the active player automatically through Wheel Wizard, shows current VR, the authoritative gain or loss from the last race, global rank and rank movement, and animates each change without manual stream-deck updates.
 
@@ -14,7 +14,7 @@ The same renderer powers the Studio preview, OBS Browser Source, and floating de
 
 ## Highlights
 
-- **One renderer, two outputs.** Use the included OBS integration or the frameless desktop overlay; both remain pixel-identical.
+- **Desktop or zero-install web.** Use the automatic companion app or configure a hosted HTTPS source in a browser; every surface shares the same renderer.
 - **Automatic identity.** Resolves Wheel Wizard's selected Dolphin user directory and derives the active friend code from the RetroWFC save. Console players can enter a friend code.
 - **Official data.** Reads RWFC room status, player leaderboard, per-race history and Mii image endpoints. No account, token, scraping, or memory injection.
 - **Accurate race deltas.** The last-race value comes from the server's race history, not a potentially ambiguous difference between polling snapshots.
@@ -22,7 +22,18 @@ The same renderer powers the Studio preview, OBS Browser Source, and floating de
 - **Advanced light engine.** Prism, chaser, pulse, wave, ghost and solid frames with independent colors, speed, width, radius and glow.
 - **Event animation.** Choose count, spring, flip, impact or no motion separately for VR and rank; large gains can trigger a celebration.
 - **Mii control.** Show or remove the Mii icon, use a clear backing, or choose solid and gradient backing colors.
+- **Per-element layout.** Independently move and resize the avatar, name, context, VR, race change, rank, and VR label.
 - **Stream-safe.** Localhost-only server, no telemetry, persistent profiles, reconnect handling and a reduced-motion option.
+
+## Use the hosted web overlay
+
+Open the [zero-install Web Overlay Studio](https://michaelaccount1.github.io/rewind-overlay/). Enter a friend code, style the badge with the same content, Mii, background, border, animation, and element controls as the desktop edition, then copy the generated source URL.
+
+- In **OBS**, add the URL as a Browser Source.
+- In **TikTok LIVE Studio**, add it as a Link / Web Page Source.
+- No Rewind server, account, or paid hosting is involved. The static page polls the public RWFC API directly and stores the profile in the configured URL.
+
+The browser sandbox cannot automatically read Wheel Wizard licenses or share an uploaded local image with a separate broadcast source. Use a friend code and an HTTPS image URL in the web edition. The desktop app remains the full-featured option for automatic multi-license following, local uploads, and the always-on-top floating window. See the [web overlay guide](docs/web-overlay.md).
 
 ## Install
 
@@ -88,6 +99,7 @@ Quality gates:
 npm run typecheck
 npm test
 npm run build
+npm run smoke:web
 npm run package
 ```
 

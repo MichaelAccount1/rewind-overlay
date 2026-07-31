@@ -174,9 +174,10 @@ export function Studio({ snapshot, connectionError }: { snapshot: Snapshot; conn
   );
 }
 
-type Patch = <S extends keyof OverlayConfig, K extends keyof OverlayConfig[S]>(
+export type ConfigPatch = <S extends keyof OverlayConfig, K extends keyof OverlayConfig[S]>(
   section: S, key: K, value: OverlayConfig[S][K]
 ) => Promise<void>;
+type Patch = ConfigPatch;
 
 function LivePanel({ snapshot, connectionError }: { snapshot: Snapshot; connectionError: string }) {
   const { player, status } = snapshot;
@@ -312,7 +313,7 @@ function IdentityPanel({ config, status, patch }: { config: OverlayConfig; statu
   );
 }
 
-function ContentPanel({ config, patch }: { config: OverlayConfig; patch: Patch }) {
+export function ContentPanel({ config, patch }: { config: OverlayConfig; patch: Patch }) {
   return (
     <>
       <Section title="Mii icon" description="Show the player's RWFC Mii, recolor its circular backing, or remove it completely.">
@@ -350,7 +351,7 @@ function ContentPanel({ config, patch }: { config: OverlayConfig; patch: Patch }
       </Section>
       <Section title="Shape & scale">
         <Field label="Overlay width"><Range value={config.layout.width} min={340} max={900} step={10} unit="px" onChange={(value) => patch("layout", "width", value)} /></Field>
-        <Field label="Desktop scale"><Range value={config.layout.scale} min={0.5} max={2} step={0.05} unit="×" onChange={(value) => patch("layout", "scale", value)} /></Field>
+        <Field label="Overlay scale"><Range value={config.layout.scale} min={0.5} max={2} step={0.05} unit="×" onChange={(value) => patch("layout", "scale", value)} /></Field>
         <Field label="Compact height" hint="Better for dense stream layouts"><Toggle label="Compact height" checked={config.layout.compact} onChange={(value) => patch("layout", "compact", value)} /></Field>
       </Section>
       <Section title="Typography">
@@ -372,7 +373,7 @@ const elementLabels: Record<OverlayElementKey, [string, string]> = {
   vrLabel: ["VR label", "Small rating label"]
 };
 
-function ElementLayoutPanel({ config, patch, resetAll }: {
+export function ElementLayoutPanel({ config, patch, resetAll }: {
   config: OverlayConfig; patch: Patch; resetAll: () => Promise<void>;
 }) {
   const [selected, setSelected] = useState<OverlayElementKey>("vr");
@@ -464,7 +465,7 @@ const borderOptions: { value: BorderEffect; label: string; detail: string }[] = 
   { value: "off", label: "None", detail: "No frame" }
 ];
 
-function BorderPanel({ config, patch }: { config: OverlayConfig; patch: Patch }) {
+export function BorderPanel({ config, patch }: { config: OverlayConfig; patch: Patch }) {
   const border = config.border;
   return (
     <>
@@ -496,7 +497,7 @@ const animationOptions: { value: ChangeAnimation; label: string }[] = [
   { value: "flip", label: "Flip" }, { value: "burst", label: "Impact" }, { value: "none", label: "None" }
 ];
 
-function AnimationPanel({ config, patch }: { config: OverlayConfig; patch: Patch }) {
+export function AnimationPanel({ config, patch }: { config: OverlayConfig; patch: Patch }) {
   return (
     <>
       <Section title="Race-result reactions" description="VR and rank can use different transitions.">

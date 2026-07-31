@@ -1,10 +1,11 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
+  base: mode === "web" ? "/rewind-overlay/" : "/",
   plugins: [react()],
   build: {
-    outDir: "dist",
+    outDir: mode === "web" ? "dist-web" : "dist",
     sourcemap: true
   },
   server: {
@@ -16,5 +17,4 @@ export default defineConfig({
     setupFiles: ["./src/test/setup.ts"],
     css: true
   }
-});
-
+}));

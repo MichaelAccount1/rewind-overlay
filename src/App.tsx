@@ -1,8 +1,10 @@
 import { Overlay } from "./components/Overlay";
 import { Studio } from "./components/Studio";
 import { useSnapshot } from "./hooks/useSnapshot";
+import { WebApp } from "./web/WebApp";
 
 export function App() {
+  if (import.meta.env.VITE_STANDALONE_WEB === "true") return <WebApp />;
   const { snapshot, error } = useSnapshot();
   const overlayRoute = window.location.pathname.startsWith("/overlay");
 

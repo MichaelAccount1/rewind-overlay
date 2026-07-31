@@ -1,0 +1,42 @@
+.web-studio .sidebar-footer small { max-width: 145px; line-height: 1.35; }
+.web-studio .topbar { gap: 18px; }
+.web-studio .top-actions { flex-wrap: wrap; justify-content: flex-end; }
+.web-preview-status {
+  margin-top: 13px; min-height: 52px; display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+  border: 1px solid #242936; border-radius: 9px; background: #11151d;
+}
+.web-preview-status > div { min-width: 0; display: flex; flex: 1; flex-direction: column; gap: 3px; }
+.web-preview-status b { overflow: hidden; color: #dce0eb; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.web-preview-status small { color: #697286; font: 7px ui-monospace, monospace; }
+.web-preview-status strong { color: #f3f4ff; font-size: 11px; }
+.web-privacy-note {
+  display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border: 1px solid #284039;
+  border-radius: 9px; color: #8ea69e; background: #12201b;
+}
+.web-privacy-note b { flex: 0 0 auto; color: #72e5b2; font-size: 9px; }
+.web-privacy-note span { font-size: 8px; line-height: 1.5; }
+.web-button-link { display: inline-grid; place-items: center; text-decoration: none; }
+
+@media (max-width: 1050px) {
+  .web-studio .workspace { grid-template-columns: 1fr; }
+  .web-studio .preview-pane {
+    position: relative; top: 0; height: auto; grid-row: 1; border-bottom: 1px solid #1e2230; border-left: 0;
+  }
+  .web-studio .editor { max-width: none; }
+}
+
+@media (max-width: 720px) {
+  .web-studio { display: block; }
+  .web-studio .sidebar {
+    position: relative; width: 100%; height: auto; padding: 12px; border-right: 0; border-bottom: 1px solid #202430;
+  }
+  .web-studio .brand { padding-bottom: 12px; }
+  .web-studio .sidebar nav { flex-direction: row; overflow-x: auto; }
+  .web-studio .sidebar nav button { min-width: 105px; }
+  .web-studio .sidebar nav small, .web-studio .sidebar-footer { display: none; }
+  .web-studio .studio-main { width: 100%; margin-left: 0; }
+  .web-studio .topbar { height: auto; min-height: 86px; padding: 14px 16px; align-items: flex-start; }
+  .web-studio .save-state { display: none; }
+  .web-studio .workspace { min-height: 0; }
+  .web-studio .editor, .web-studio .preview-pane { padding: 18px 14px 40px; }
+}

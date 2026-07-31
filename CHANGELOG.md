@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- Add a zero-install hosted Web Overlay Studio and transparent HTTPS source for OBS and TikTok LIVE Studio.
+- Share the race-aware polling engine between desktop and browser builds.
+- Detect live Wheel Wizard license renames and license-slot changes without restarting.
+- Add automatic online-license following plus explicit slot pinning for multi-license players.
+- Reset rank, delta, avatar, and prior-player state cleanly whenever the active license changes.
+- Remove stale room and track context as soon as the player is no longer seated.
+- Add independent size and placement controls for every badge element.
+- Smoke-test packaged Windows, Linux/Xvfb, and macOS applications in CI and before releases.
+
 ## 1.0.3
 
 - Add a dedicated Mii section with an explicit hide switch, solid and gradient backing colors, and a fully transparent backing.
