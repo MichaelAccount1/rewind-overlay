@@ -246,8 +246,34 @@ function IdentityPanel({ config, status, patch }: { config: OverlayConfig; statu
 function ContentPanel({ config, patch }: { config: OverlayConfig; patch: Patch }) {
   return (
     <>
+      <Section title="Mii icon" description="Show the player's RWFC Mii, recolor its circular backing, or remove it completely.">
+        <Field label="Show Mii icon" hint="Turn this off to remove the icon and reclaim its space">
+          <Toggle label="Show Mii icon" checked={config.visibility.avatar} onChange={(value) => patch("visibility", "avatar", value)} />
+        </Field>
+        {config.visibility.avatar && (
+          <>
+            <Field label="Mii background">
+              <Segmented value={config.avatar.background} onChange={(value) => patch("avatar", "background", value)} options={[
+                { value: "gradient", label: "Gradient" },
+                { value: "solid", label: "Solid" },
+                { value: "transparent", label: "Clear" }
+              ]} />
+            </Field>
+            {config.avatar.background !== "transparent" && (
+              <Field label={config.avatar.background === "solid" ? "Background color" : "Gradient start"}>
+                <ColorInput value={config.avatar.color1} onChange={(value) => patch("avatar", "color1", value)} />
+              </Field>
+            )}
+            {config.avatar.background === "gradient" && (
+              <Field label="Gradient end">
+                <ColorInput value={config.avatar.color2} onChange={(value) => patch("avatar", "color2", value)} />
+              </Field>
+            )}
+          </>
+        )}
+      </Section>
       <Section title="Visible information" description="Every data point can be enabled independently.">
-        {(Object.keys(visibilityLabels) as (keyof OverlayConfig["visibility"])[]).map((key) => (
+        {(Object.keys(visibilityLabels) as (keyof OverlayConfig["visibility"])[]).filter((key) => key !== "avatar").map((key) => (
           <Field key={key} label={visibilityLabels[key][0]} hint={visibilityLabels[key][1]}>
             <Toggle label={visibilityLabels[key][0]} checked={config.visibility[key]} onChange={(value) => patch("visibility", key, value)} />
           </Field>

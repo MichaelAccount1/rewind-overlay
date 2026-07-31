@@ -3,9 +3,17 @@ export type ChangeAnimation = "count" | "spring" | "flip" | "burst" | "none";
 
 export interface OverlayConfig {
   version: 1;
-  identity: { mode: "auto" | "friendCode" | "manual"; friendCode: string; playerName: string; tag: string };
+  identity: {
+    mode: "auto" | "friendCode" | "manual"; friendCode: string; playerName: string; tag: string;
+    licenseSlot: number; followOnlineLicense: boolean;
+  };
   data: { groupsUrl: string; leaderboardUrl: string; pollSeconds: number; offlineAfterSeconds: number; demoMode: boolean };
   visibility: Record<"avatar" | "name" | "tag" | "vr" | "delta" | "rank" | "rankDelta" | "connection" | "room" | "track" | "sessionDelta" | "dailyDelta", boolean>;
+  avatar: {
+    background: "gradient" | "solid" | "transparent";
+    color1: string;
+    color2: string;
+  };
   layout: { scale: number; width: number; compact: boolean; align: "horizontal" | "stacked" };
   typography: { family: string; numberFamily: string; weight: number; textColor: string; mutedColor: string };
   background: {

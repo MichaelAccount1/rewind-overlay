@@ -38,6 +38,26 @@ describe("Overlay", () => {
     expect(screen.getByText("87,747")).toBeInTheDocument();
   });
 
+  it("can hide the Mii icon completely", () => {
+    const config = structuredClone(defaultConfig);
+    config.visibility.avatar = false;
+    const { container } = render(<Overlay snapshot={snapshot({ config })} preview />);
+    expect(container.querySelector(".avatar")).not.toBeInTheDocument();
+  });
+
+  it("supports solid and transparent Mii backgrounds", () => {
+    const config = structuredClone(defaultConfig);
+    config.avatar = { background: "solid", color1: "#ff2244", color2: "#113355" };
+    const { container, rerender } = render(<Overlay snapshot={snapshot({ config })} preview />);
+    const stage = container.querySelector<HTMLElement>(".overlay-stage")!;
+    expect(container.querySelector(".avatar")).toHaveClass("avatar-solid");
+    expect(stage.style.getPropertyValue("--avatar-color-1")).toBe("#ff2244");
+
+    config.avatar = { ...config.avatar, background: "transparent" };
+    rerender(<Overlay snapshot={snapshot({ config })} preview />);
+    expect(container.querySelector(".avatar")).toHaveClass("avatar-transparent");
+  });
+
   it("announces the player overlay for assistive technology", () => {
     render(<Overlay snapshot={snapshot()} preview />);
     expect(screen.getByRole("region", { name: /retro rewind player overlay for zpl/i })).toBeInTheDocument();

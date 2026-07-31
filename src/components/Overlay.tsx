@@ -70,6 +70,8 @@ export function Overlay({ snapshot, desktop = false, preview = false }: {
     "--color-3": border.color3,
     "--text-color": config.typography.textColor,
     "--muted-color": config.typography.mutedColor,
+    "--avatar-color-1": config.avatar.color1,
+    "--avatar-color-2": config.avatar.color2,
     "--font-body": config.typography.family,
     "--font-number": config.typography.numberFamily,
     "--font-weight": config.typography.weight,
@@ -114,7 +116,7 @@ export function Overlay({ snapshot, desktop = false, preview = false }: {
           <div className="card-content">
             <div className="identity-block">
               {config.visibility.avatar && (
-                <div className="avatar" aria-hidden="true">
+                <div className={`avatar avatar-${config.avatar.background}`} aria-hidden="true">
                   {player.avatarUrl
                     ? <img src={player.avatarUrl} alt="" />
                     : <span>{initials(player.name)}</span>}

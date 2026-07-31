@@ -19,6 +19,11 @@ export interface OverlayConfig {
     rank: boolean; rankDelta: boolean; connection: boolean; room: boolean; track: boolean;
     sessionDelta: boolean; dailyDelta: boolean;
   };
+  avatar: {
+    background: "gradient" | "solid" | "transparent";
+    color1: string;
+    color2: string;
+  };
   layout: { scale: number; width: number; compact: boolean; align: "horizontal" | "stacked" };
   typography: { family: string; numberFamily: string; weight: number; textColor: string; mutedColor: string };
   background: {
@@ -73,6 +78,7 @@ export const defaultConfig: OverlayConfig = {
     rank: true, rankDelta: true, connection: false, room: false, track: false,
     sessionDelta: false, dailyDelta: false
   },
+  avatar: { background: "gradient", color1: "#31d4ff", color2: "#3556ae" },
   layout: { scale: 1, width: 560, compact: false, align: "horizontal" },
   typography: {
     family: "Inter, ui-sans-serif, system-ui, sans-serif",
